@@ -1,0 +1,173 @@
+uint64_t Haddr(uvec2 h)
+{
+    return SCREEN_WIDTH*h.x + h.y;
+}
+
+uint hash(uint key, uint age)
+{
+    return (key+offsets[age-1])%H;
+}
+
+uint hash_1(uint h, uint age)
+{
+    return (h-offsets[age-1])%H;
+}
+
+uint64_t pack(uint64_t key, uint64_t nb_pixels)
+{
+    return (key<<32 | nb_pixels);
+}
+
+uint getCount(uint64_t n)
+{
+    return uint(n);
+}
+
+uint getKey(uint64_t n)
+{
+    return uint(n>>32);
+}
+
+uint getIndex(uint64_t key)
+{
+    uint age = 0;
+    while(++age<MAX_AGE)
+    {
+        //compute hash location
+        uint h = hash(uint(key), age);
+        uint64_t curr_pixel = hashTable[h];
+        if(getKey(curr_pixel) == key)
+            return (vPrefixSums[h] + atomicAdd(vAtomicCounters[h], 1));
+    }
+    return 0;
+}
+
+const uint normal_offset = 30;
+
+uint pack_in_idObj(uint normal_in, uint idObj)
+{
+    return (normal_in<<normal_offset | idObj);
+}
+
+uint unpack_in(opt_frag frag)
+{
+   return frag.info_1.x>>normal_offset;
+}
+
+void insert(uint64_t key)
+{
+    uint age = 0;
+    uint64_t new_pixel = pack(key, 1);
+    while(++age<MAX_AGE)
+    {
+        //compute hash location
+        uint h = hash(uint(key), age);
+        uint64_t old_pixel = atomicCompSwap(hashTable[h], 0, new_pixel);
+        if(old_pixel == 0)
+            return;
+        else {
+            if(getKey(old_pixel) == key)
+            {
+                atomicAdd(hashTable[h], 1);
+                return;
+            }
+        }
+    }
+}
+
+void swap(uint i, uint j)
+{
+    opt_frag tmp = vOptFrags[i];
+    vOptFrags[i] = vOptFrags[j];
+    vOptFrags[j] = tmp;
+}
+
+vec3 getPos(uint key, float depth)
+{
+    uint i = key/SCREEN_HEIGHT;
+    uint j = key - i*SCREEN_HEIGHT;
+    float ndc_i = float(i)/float(SCREEN_WIDTH);
+    float ndc_j = float(j)/float(SCREEN_HEIGHT);
+    float width = length(a-b);
+    float height = length(a-d);
+
+    ndc_i = ndc_i*float(width) - float(width)/2.0f;
+    ndc_j = ndc_j*float(height) - float(height)/2.0f;
+    vec3 camCenter = (a+b+c+d)/4.0f;
+    vec3 pos;
+
+    if(RENDER_DIR == 0) {
+      ndc_i += camCenter.z;
+      ndc_j += camCenter.y;
+      pos = vec3(camCenter.x+depth*BOX_DEPTH, ndc_j, ndc_i);
+    } else if(RENDER_DIR == 1) {
+      ndc_i += camCenter.x;
+      ndc_j += camCenter.z;
+      pos = vec3(ndc_i, camCenter.y+depth*BOX_DEPTH, ndc_j);
+    } else {
+      ndc_i -= camCenter.x;
+      ndc_j += camCenter.y;
+      pos = vec3(-ndc_i, ndc_j, camCenter.z+depth*BOX_DEPTH);
+    }
+
+    return pos;
+}
+
+uint pack_in_depth(uint normal_in, float depth)
+{
+    uint power = 1;
+    uint result = normal_in*power;
+    uint tmp_mod;
+    for(int i=0; i<10; i++)
+    {
+        tmp_mod = uint(mod(depth, 2));
+        result = (result<<1) + tmp_mod;
+        depth -= float(tmp_mod);
+        depth *= 2;
+    }
+    return result;
+}
+
+float unpack_in_depth(uint val)
+{
+    uint power = 1<<9;
+    float result = 0.0f;
+    uint tmp_mod;
+    for(int i=0; i<10; i++)
+    {
+        tmp_mod = uint(mod(val, 2));
+        result += float(tmp_mod)/float(power);
+        val -= tmp_mod;
+        val /= 2;
+        power = power>>1;
+    }
+    return result;
+}
+
+uint64_t dilatate(uint a)
+{
+   uint64_t x = a & 0x1fffff;
+   x = (x | x << 32) & uint64_t((0x1f0000<<32) | 0x0000ffff);  // shift left 32 bits, OR with self, and 00011111000000000000000000000000000000001111111111111111
+   x = (x | x << 16) & uint64_t((0x1f0000<<32) | 0xff0000ff);  // shift left 32 bits, OR with self, and 00011111000000000000000011111111000000000000000011111111
+   x = (x | x << 8) & uint64_t((0x100f00f0<<32) | 0x0f00f00f); // shift left 32 bits, OR with self, and 0001000000001111000000001111000000001111000000001111000000000000
+   x = (x | x << 4) & uint64_t((0x10c30c30<<32) | 0xc30c30c3); // shift left 32 bits, OR with self, and 0001000011000011000011000011000011000011000011000011000100000000
+   x = (x | x << 2) & uint64_t((0x12492492<<32) | 0x49249249);
+   return x;
+}
+
+uint64_t morton_idx(vec3 pos)
+{
+   uint64_t res = 0;
+   uint x = uint(pos.x*10.0f);
+   uint y = uint(pos.y*10.0f);
+   uint z = uint(pos.z*10.0f);
+   res |= dilatate(x) | (dilatate(y)<<1) | (dilatate(z)<<2);
+   res = dilatate(x);
+   return res;
+}
+
+uint getIntegerCoord(float coord)
+{
+   return uint(10.0f*coord);
+}
+

@@ -1,0 +1,9 @@
+vec3 interpolate3D(vec3 v1, vec3 v2, vec3 v3)
+{
+    return gl_TessCoord.x*v1+gl_TessCoord.y*v2+gl_TessCoord.z*v3;
+}
+
+vec2 interpolate2D(vec2 v1, vec2 v2, vec2 v3)
+{
+    return gl_TessCoord.x*v1+gl_TessCoord.y*v2+gl_TessCoord.z*v3;
+}

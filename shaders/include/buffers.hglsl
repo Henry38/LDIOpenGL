@@ -1,0 +1,70 @@
+//BUFFERS
+//the hash-table
+layout (binding = 0) buffer ssbo_hashPixels
+{
+    uint64_t hashTable[];
+};
+
+//the hash-table offsets
+layout (binding = 1) buffer ssbo_offsets
+{
+    uint offsets[];
+};
+
+//the prefix sums
+layout(binding=2) buffer ssbo_prefix_sums
+{
+    uint vPrefixSums[];
+};
+
+layout(binding=3) buffer ssbo_sums
+{
+    uint vSums[];
+};
+
+//un compteur atomique par pixel
+layout(binding=4) buffer ssbo_atomic_counters
+{
+    uint vAtomicCounters[];
+};
+
+//un compteur atomique par pixel
+layout(binding=5) buffer ssbo_opt_frags
+{
+    opt_frag vOptFrags[];
+};
+
+layout(binding=6) buffer ssbo_gradients
+{
+    float vGradients[];
+};
+
+layout(binding=7) buffer ssbo_sparse_gradients
+{
+    vec4 vSparseGradients[];
+};
+
+layout (binding=8) buffer ssbo_zero_float
+{
+    float vZeroFloat[];
+};
+
+layout (binding = 9) buffer ssbo_zero_uint
+{
+    uint vZeroUint[];
+};
+
+layout (binding = 10) buffer ssbo_zero_uint64
+{
+    uint64_t vZeroUint64[];
+};
+
+layout(binding=11) buffer ssbo_box
+{
+    int box[6]; //xmin, ymin, zmin, xmax, ymax, zmax
+};
+
+layout(binding=12) buffer ssbo_frites
+{
+    double_frite frites[];
+};

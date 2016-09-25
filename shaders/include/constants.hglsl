@@ -1,0 +1,7 @@
+#version 430
+
+//STRUCTURES
+struct opt_frag {
+    uvec4 info_1; //in+idObj, sommet_1, sommet_2, sommet_3
+    vec4 info_2; //i*width+j, depth, b_2, b_3
+};

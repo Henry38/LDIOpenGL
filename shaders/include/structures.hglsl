@@ -1,0 +1,22 @@
+//STRUCTURES
+struct opt_frag {
+    uvec4 info_1; //in+idObj, sommet_1, sommet_2, sommet_3
+    vec4 info_2; //i*width+j, depth, b_2, b_3
+};
+
+struct double_frite {
+    float topFrite[3];
+    float downFrite[3];
+};
+
+struct voxel_frag {
+   uvec4 idx_top_sommets;
+   uvec4 down_sommets;
+   vec4 dz_top_coeffs;
+   vec4 down_coeffs; //vec4 to get aligned memory structure
+};
+
+struct interval {
+   opt_frag z0;
+   opt_frag z1;
+};
