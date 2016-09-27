@@ -77,7 +77,8 @@ int main() {
 
     // Creation du vaoQuad pour le frameBuffer
     GLuint vaoQuad;
-    GLuint quad;
+    GLuint quad, quadTex;
+
     const GLfloat quadData[] = {
       -1.0f, -1.0f, 0.0f,
        1.0f, -1.0f, 0.0f,
@@ -87,8 +88,18 @@ int main() {
        1.0f,  1.0f, 0.0f,
     };
 
+    const GLfloat quadDataTex[] = {
+        0.0f, 0.0f,
+        1.0f, 0.0f,
+        0.0f, 1.0f,
+        0.0f, 1.0f,
+        1.0f, 0.0f,
+        1.0f, 1.0f,
+    };
+
     glGenVertexArrays(1, &vaoQuad);
     glGenBuffers(1, &quad);
+    glGenBuffers(1, &quadTex);
 
     glBindVertexArray(vaoQuad);
 
@@ -96,6 +107,11 @@ int main() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(quadData), quadData, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*) 0);
     glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, quadTex);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadDataTex), quadDataTex, GL_STATIC_DRAW);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*) 0);
+    glEnableVertexAttribArray(1);
 
     glBindVertexArray(0);
 
@@ -136,6 +152,9 @@ int main() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, renderDepth, 0);
+
+    GLuint tab[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+    glDrawBuffers(2, tab);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
