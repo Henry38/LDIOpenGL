@@ -27,8 +27,6 @@ set(SHADER_FILES
     shaders/basic.frag
     shaders/ldi_fboPass.vert
     shaders/ldi_fboPass.frag
-    shaders/ldi_basic.vert
-    shaders/ldi_basic.frag
     shaders/fboPass.vert
     shaders/fboPass.frag
 )

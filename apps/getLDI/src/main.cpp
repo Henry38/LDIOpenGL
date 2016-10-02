@@ -102,6 +102,7 @@ int main() {
 
     int nb = ldiModel.getNbPixelFrags();
     std::cout << nb << " pixels rendus dans le fbo" << std::endl;
+    glViewport(0, 0, width, height);
 
     ///////////////////////////////////////////////////////////////////////////
     // Creation du vaoQuad pour afficher le frameBuffer
@@ -110,14 +111,6 @@ int main() {
     ///////////////////////////////////////////////////////////////////////////
     // Creation d'un frameBuffer et de ses textures
     initFrameBuffer(width, height);
-
-//    ///////////////////////////////////////////////////////////////////////////
-//    // Creation d'un uniform buffer object
-//    GLuint ubo;
-//    glGenBuffers(1, &ubo);
-//    glBindBuffer(GL_UNIFORM_BUFFER, ubo);
-//    glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
-//    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     ///////////////////////////////////////////////////////////////////////////
     // Creation des shaders
@@ -142,30 +135,29 @@ int main() {
     // Passer les textures au second shader ici
     attachTextureToShader(shaderProg);
 
-//    ///////////////////////////////////////////////////////////////////////////
-//    // Dessiner dans le framebuffer (premiere passe)
+    ///////////////////////////////////////////////////////////////////////////
+    // Dessiner dans le framebuffer (premiere passe)
+    glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
-//    glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-//    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glUseProgram(shaderFrameBufferProg);
 
-//    glUseProgram(shaderFrameBufferProg);
+    for (unsigned int i = 0; i < vLDIMesh.size(); ++i) {
+        LDIMesh *mesh = vLDIMesh[i];
+        mesh->draw();
+    }
 
-//    for (unsigned int i = 0; i < vLDIMesh.size(); ++i) {
-//        LDIMesh *mesh = vLDIMesh[i];
-//        mesh->draw();
-//    }
+    // Dessiner dans le framebuffer d'OpenGL (seconde passe)
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-//    // Dessiner dans le framebuffer d'OpenGL (seconde passe)
-//    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-//    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glUseProgram(shaderProg);
 
-//    glUseProgram(shaderProg);
-
-//    glBindVertexArray(vaoQuad);
-//    glDrawArrays(GL_TRIANGLES, 0, 6);
-//    glBindVertexArray(0);
+    glBindVertexArray(vaoQuad);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
 
     ///////////////////////////////////////////////////////////////////////////
     // Boucle evenementielle de GLFW
@@ -315,16 +307,6 @@ void sendVariablesToShader(GLuint program)
     glUniform3fv(lightLoc, 1, glm::value_ptr(light));
 
     glUseProgram(0);
-
-//    glm::mat4 proj = projMat * viewMat;
-//    glBindBuffer(GL_UNIFORM_BUFFER, ubo);
-//    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(proj));
-//    glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-//    GLuint block_index = glGetUniformBlockIndex(shaderFrameBufferProg, "shader_data");
-//    GLuint binding_point_index = 2;
-//    glBindBufferBase(GL_UNIFORM_BUFFER, binding_point_index, ubo);
-//    glUniformBlockBinding(shaderFrameBufferProg, block_index, binding_point_index);
 }
 
 void attachTextureToShader(GLuint program)
