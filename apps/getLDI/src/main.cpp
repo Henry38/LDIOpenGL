@@ -20,6 +20,7 @@
 
 // Project
 #include "LDIMesh.hpp"
+#include "LDIModel.hpp"
 #include "LDIShader.hpp"
 
 #ifdef CMAKE_CWD
@@ -32,6 +33,20 @@ const int framerate = 20;
 const GLuint screenWidth = 2*320;
 const GLuint screenHeight = 2*240;
 GLFWwindow* window;
+
+GLuint vaoQuad, quad, quadTex;
+void initVaoQuad();
+void destroyVaoQuad();
+
+GLuint frameBuffer;
+GLuint renderColor;
+GLuint renderNormal;
+GLuint renderDepth;
+void initFrameBuffer(unsigned int width, unsigned int height);
+void destroyFrameBuffer();
+
+void sendVariablesToShader(GLuint program);
+void attachTextureToShader(GLuint program);
 
 int main() {
 
@@ -65,7 +80,7 @@ int main() {
     glViewport(0, 0, width, height);
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glClearColor(0.0, 1.0, 0.0, 0.0);
     glEnable(GL_DEPTH_TEST);
 
     ///////////////////////////////////////////////////////////////////////////
@@ -75,10 +90,114 @@ int main() {
     LDIMesh *ldiMesh1 = LDIMesh::fromObj(objFilename1);
     vLDIMesh.push_back(ldiMesh1);
 
-    // Creation du vaoQuad pour le frameBuffer
-    GLuint vaoQuad;
-    GLuint quad, quadTex;
+    // Creation du LDIModel
+    LDIModel::orthoView view;
+    view.camCenter = glm::vec3(0,0,6);
+    view.normalDir = glm::vec3(0,0,-1);
+    view.upDir = glm::vec3(0,1,0);
+    view.width = 20;
+    view.height = 20;
+    view.depth = 20;
+    LDIModel ldiModel(vLDIMesh, view, 0.1f, 0.1f);
 
+    int nb = ldiModel.getNbPixelFrags();
+    std::cout << nb << " pixels rendus dans le fbo" << std::endl;
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Creation du vaoQuad pour afficher le frameBuffer
+    initVaoQuad();
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Creation d'un frameBuffer et de ses textures
+    initFrameBuffer(width, height);
+
+//    ///////////////////////////////////////////////////////////////////////////
+//    // Creation d'un uniform buffer object
+//    GLuint ubo;
+//    glGenBuffers(1, &ubo);
+//    glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+//    glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
+//    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Creation des shaders
+    std::vector<std::string> shaderPath;
+    shaderPath.push_back("basic.vert");
+    shaderPath.push_back("basic.frag");
+    LDIShader shader(shaderPath, LDI_SHADER_VF);
+
+    std::vector<std::string> shaderPathFrameBuffer;
+    shaderPathFrameBuffer.push_back("fboPass.vert");
+    shaderPathFrameBuffer.push_back("fboPass.frag");
+    LDIShader shaderFrameBuffer(shaderPathFrameBuffer, LDI_SHADER_VF);
+
+    GLuint shaderProg = shader.getProgramID();
+    GLuint shaderFrameBufferProg = shaderFrameBuffer.getProgramID();
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Passer les matrices au premier shader ici
+    sendVariablesToShader(shaderFrameBufferProg);
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Passer les textures au second shader ici
+    attachTextureToShader(shaderProg);
+
+//    ///////////////////////////////////////////////////////////////////////////
+//    // Dessiner dans le framebuffer (premiere passe)
+
+//    glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+
+//    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+//    glUseProgram(shaderFrameBufferProg);
+
+//    for (unsigned int i = 0; i < vLDIMesh.size(); ++i) {
+//        LDIMesh *mesh = vLDIMesh[i];
+//        mesh->draw();
+//    }
+
+//    // Dessiner dans le framebuffer d'OpenGL (seconde passe)
+//    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+//    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+//    glUseProgram(shaderProg);
+
+//    glBindVertexArray(vaoQuad);
+//    glDrawArrays(GL_TRIANGLES, 0, 6);
+//    glBindVertexArray(0);
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Boucle evenementielle de GLFW
+    do {
+        // Swap buffers
+        glfwSwapBuffers(window);
+        glfwWaitEvents();
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(int(1000 / framerate)));
+    } // Check if the ESC key was pressed or the window was closed
+    while( glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(window) == 0 );
+
+    for (unsigned int i = 0; i < vLDIMesh.size(); ++i) {
+        LDIMesh::destroy( vLDIMesh[i] );
+    }
+
+//    glDeleteBuffers(1, &ubo);
+
+    destroyFrameBuffer();
+
+    destroyVaoQuad();
+
+    glUseProgram(0);
+
+    glfwDestroyWindow(window);
+    glfwTerminate();
+
+    return EXIT_SUCCESS;
+}
+
+void initVaoQuad()
+{
     const GLfloat quadData[] = {
       -1.0f, -1.0f, 0.0f,
        1.0f, -1.0f, 0.0f,
@@ -114,14 +233,17 @@ int main() {
     glEnableVertexAttribArray(1);
 
     glBindVertexArray(0);
+}
 
-    ///////////////////////////////////////////////////////////////////////////
-    // Creation d'un frameBuffer et de ses textures
-    GLuint frameBuffer;
-    GLuint renderColor;
-    GLuint renderNormal;
-    GLuint renderDepth;
+void destroyVaoQuad()
+{
+    glDeleteBuffers(1, &quad);
+    glDeleteBuffers(1, &quadTex);
+    glDeleteVertexArrays(1, &vaoQuad);
+}
 
+void initFrameBuffer(unsigned int width, unsigned int height)
+{
     glGenFramebuffers(1, &frameBuffer);
     glGenTextures(1, &renderColor);
     glGenTextures(1, &renderNormal);
@@ -157,115 +279,72 @@ int main() {
     glDrawBuffers(2, tab);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
 
-    ///////////////////////////////////////////////////////////////////////////
-    // Creation des shaders
-    std::vector<std::string> shaderPath;
-    shaderPath.push_back("vPass.glsl");
-    shaderPath.push_back("fPass.glsl");
-    LDIShader shader(shaderPath, LDI_SHADER_VF);
+void destroyFrameBuffer()
+{
+    glDeleteTextures(1, &renderColor);
+    glDeleteTextures(1, &renderNormal);
+    glDeleteTextures(1, &renderDepth);
+    glDeleteFramebuffers(1, &frameBuffer);
+}
 
-    std::vector<std::string> shaderPathFrameBuffer;
-    shaderPathFrameBuffer.push_back("vFrameBufferPass.glsl");
-    shaderPathFrameBuffer.push_back("fFrameBufferPass.glsl");
-    LDIShader shaderFrameBuffer(shaderPathFrameBuffer, LDI_SHADER_VF);
+void sendVariablesToShader(GLuint program)
+{
+    glUseProgram(program);
 
-    GLuint shaderProg = shader.getProgramID();
-    GLuint shaderFrameBufferProg = shaderFrameBuffer.getProgramID();
-
-    glUseProgram(shaderFrameBufferProg);
-
-    ///////////////////////////////////////////////////////////////////////////
-    // Passer les matrices ici
     glm::vec3 camCenter(0,0,6);
     glm::vec3 lookAt(0,0,0);
     glm::vec3 upDir(0,1,0);
-    float depth = 20;
+    float depth = 20.0f;
 
     //glm::mat4 projMat = glm::perspective(90.0f, (float)width / (float)height, 0.1f, 40.0f);
-    glm::mat4 projMat = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 1.0f, depth);
+    glm::mat4 projMat = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.0f, depth);
     glm::mat4 viewMat = glm::lookAt(camCenter, lookAt, upDir);
     glm::mat4 modelMat = glm::mat4();
     glm::vec3 light = glm::vec3(0,0,-1);
 
-    GLuint projLoc = glGetUniformLocation(shaderFrameBufferProg, "projMat");
-    GLuint viewLoc = glGetUniformLocation(shaderFrameBufferProg, "viewMat");
-    GLuint modelLoc = glGetUniformLocation(shaderFrameBufferProg, "modelMat");
-    GLuint lightLoc = glGetUniformLocation(shaderFrameBufferProg, "light");
+    GLuint projLoc = glGetUniformLocation(program, "projMat");
+    GLuint viewLoc = glGetUniformLocation(program, "viewMat");
+    GLuint modelLoc = glGetUniformLocation(program, "modelMat");
+    GLuint lightLoc = glGetUniformLocation(program, "light");
 
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projMat));
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMat));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMat));
     glUniform3fv(lightLoc, 1, glm::value_ptr(light));
 
-    ///////////////////////////////////////////////////////////////////////////
-    // Dessiner dans le framebuffer (premiere passe)
+    glUseProgram(0);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+//    glm::mat4 proj = projMat * viewMat;
+//    glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+//    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(proj));
+//    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//    GLuint block_index = glGetUniformBlockIndex(shaderFrameBufferProg, "shader_data");
+//    GLuint binding_point_index = 2;
+//    glBindBufferBase(GL_UNIFORM_BUFFER, binding_point_index, ubo);
+//    glUniformBlockBinding(shaderFrameBufferProg, block_index, binding_point_index);
+}
 
-    glUseProgram(shaderFrameBufferProg);
+void attachTextureToShader(GLuint program)
+{
+    glUseProgram(program);
 
-    for (unsigned int i = 0; i < vLDIMesh.size(); ++i) {
-        LDIMesh *mesh = vLDIMesh[i];
-        mesh->draw();
-    }
-
-    // Dessiner de le framebuffer d'OpenGL (seconde passe)
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glUseProgram(shaderProg);
-
-    // Envoyer les textures ici
     // color texture
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, renderColor);
-    glUniform1i(glGetUniformLocation(shaderProg, "textureColor"), 0);
+    glUniform1i(glGetUniformLocation(program, "textureColor"), 0);
 
     // normal texture
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, renderNormal);
-    glUniform1i(glGetUniformLocation(shaderProg, "textureNormal"), 1);
+    glUniform1i(glGetUniformLocation(program, "textureNormal"), 1);
 
     // depth texture
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, renderDepth);
-    glUniform1i(glGetUniformLocation(shaderProg, "textureDepth"), 2);
-
-    glBindVertexArray(vaoQuad);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    glBindVertexArray(0);
-
-    ///////////////////////////////////////////////////////////////////////////
-    // Boucle evenementielle de GLFW
-    do {
-        // Swap buffers
-        glfwSwapBuffers(window);
-        glfwWaitEvents();
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(int(1000 / framerate)));
-    } // Check if the ESC key was pressed or the window was closed
-    while( glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(window) == 0 );
-
-    for (unsigned int i = 0; i < vLDIMesh.size(); ++i) {
-        LDIMesh::destroy( vLDIMesh[i] );
-    }
-
-    glDeleteTextures(1, &renderColor);
-    glDeleteTextures(1, &renderNormal);
-    glDeleteTextures(1, &renderDepth);
-    glDeleteFramebuffers(1, &frameBuffer);
-
-    glDeleteBuffers(1, &quad);
-    glDeleteVertexArrays(1, &vaoQuad);
+    glUniform1i(glGetUniformLocation(program, "textureDepth"), 2);
 
     glUseProgram(0);
-
-    glfwDestroyWindow(window);
-    glfwTerminate();
-
-    return EXIT_SUCCESS;
 }

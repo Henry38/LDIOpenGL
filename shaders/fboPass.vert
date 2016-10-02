@@ -12,5 +12,5 @@ out vec3 n;
 void main()
 {
     n = vNormal;
-    gl_Position = projMat*viewMat*modelMat*vec4(vPosition, 1.0);
+    gl_Position = projMat * viewMat * modelMat * vec4(vPosition, 1.0);
 }

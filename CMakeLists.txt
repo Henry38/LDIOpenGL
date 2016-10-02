@@ -9,24 +9,28 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/modules"
 #================= Project Files =================#
 #file(GLOB_RECURSE HEADER_FILES include/*.hpp)
 #file(GLOB_RECURSE SOURCE_FILES src/*.cpp src/*.tpp)
-file(GLOB_RECURSE SHADER_FILES shaders/*.glsl)
+#file(GLOB_RECURSE SHADER_FILES shaders/*.glsl)
 set(HEADER_FILES
     include/LDIMesh.hpp
-#    include/LDImodel.hpp
+    include/LDIModel.hpp
     include/LDIShader.hpp
 )
 
 set(SOURCE_FILES
     src/LDIMesh.cpp
-#    src/LDImodel.tpp
+    src/LDIModel.cpp
     src/LDIShader.cpp
 )
 
 set(SHADER_FILES
-    shaders/fFrameBufferPass.glsl
-    shaders/fPass.glsl
-    shaders/vFrameBufferPass.glsl
-    shaders/vPass.glsl
+    shaders/basic.vert
+    shaders/basic.frag
+    shaders/ldi_fboPass.vert
+    shaders/ldi_fboPass.frag
+    shaders/ldi_basic.vert
+    shaders/ldi_basic.frag
+    shaders/fboPass.vert
+    shaders/fboPass.frag
 )
 
 #================= Libraries Dependancies =================#

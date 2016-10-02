@@ -23,7 +23,6 @@ public:
     ~LDIShader();
 
     GLuint getProgramID() { return m_program; }
-    //void use();
 
     static std::string shaderDirectory;
 

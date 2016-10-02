@@ -1,55 +1,98 @@
 #ifndef LDIMODEL_HPP
 #define LDIMODEL_HPP
 
-//#include "LDIstructs.hpp"
-#include "LDIShader.hpp"
+// Glm
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+// Project
 #include "LDIMesh.hpp"
+#include "LDIShader.hpp"
 
-enum LDI_ENUMS
-{
-    LDI_BINDING_HASHTABLE,
-    LDI_BINDING_OFFSETS,
-    LDI_BINDING_PREFIX_SUMS,
-    LDI_BINDING_SUMS,
-    LDI_BINDING_ATOMIC_COUNTERS,
-    LDI_BINDING_OPT_FRAGS,
-    LDI_BINDING_GRADIENTS,
-    LDI_BINDING_SPARSE_GRADIENTS,
-    LDI_BINDING_ZERO_FLOAT,
-    LDI_BINDING_ZERO_UINT,
-    LDI_BINDING_ZERO_UINT64,
-    LDI_BINDING_BBOX,
-    LDI_BINDING_FRITES
-};
+//enum LDI_ENUMS
+//{
+//    LDI_BINDING_HASHTABLE,
+//    LDI_BINDING_OFFSETS,
+//    LDI_BINDING_PREFIX_SUMS,
+//    LDI_BINDING_SUMS,
+//    LDI_BINDING_ATOMIC_COUNTERS,
+//    LDI_BINDING_OPT_FRAGS,
+//    LDI_BINDING_GRADIENTS,
+//    LDI_BINDING_SPARSE_GRADIENTS,
+//    LDI_BINDING_ZERO_FLOAT,
+//    LDI_BINDING_ZERO_UINT,
+//    LDI_BINDING_ZERO_UINT64,
+//    LDI_BINDING_BBOX,
+//    LDI_BINDING_FRITES
+//};
 
-class LDImodel {
+class LDIModel {
 public:
-    LDImodel();
-    LDImodel(std::vector<LDIMesh*> vLDIMeshes, GLuint screenWidth, GLuint screenHeight);
-    ~LDImodel();
 
-    std::vector<pixel_frag> getPixelFrags(box viewBox, float width, float height);
-    std::vector<pixel_frag> getPixelFrags_2(glm::vec3 camCenter, glm::vec3 normal, glm::vec3 upDir, float height, float width, float depth, float x_resolution, float y_resolution);
+    struct orthoView {
+        glm::vec3 camCenter;
+        glm::vec3 normalDir;
+        glm::vec3 upDir;
+        float width;
+        float height;
+        float depth;
+    };
 
-    /////////////// DEV PART /////////////
-    void updateOptMultiGradients_2(GLuint nb_divide);
-    void updateOptGradients();
-    void updateOptMultiGradients(GLuint nb_divide);
-    void updateOptGradientsDisplacement();
-    void getOptFrags();
-    void getOptFragsFromIntervals();
-    void freeOptGradientsBuffers();
-    void freeOptMultiGradientsBuffers();
-    void getNbPixels(box viewBox);
-    void hashPixelsDisplacement();
-    void rasterizationOptDisplacement();
+    struct pixel_frag {
+        unsigned short m_i;
+        unsigned short m_j;
+        float m_z;
+    };
 
-    void setBoundingBox(glm::vec3 min, glm::vec3 max);
-    void setResolution(float resolution);
-    void updateViewport(box viewbox);
-    void resetViewport();
-    int m_nbPixels;
-    box m_xViewBox, m_yViewBox, m_zViewBox;
+    LDIModel();
+    LDIModel(const std::vector<LDIMesh*> &vLDIMeshes, const orthoView &view, float rx, float ry);
+    ~LDIModel();
+
+    void setOrthogonalView(const orthoView &view);
+    int getNbPixelFrags();
+    std::vector<pixel_frag> getPixelFrags();
+
+    std::vector<LDIMesh*> m_meshes;
+    orthoView m_view;
+    float m_x_resolution;
+    float m_y_resolution;
+    unsigned int m_screenWidth;
+    unsigned int m_screenHeight;
+
+    GLuint m_vaoQuad;
+    GLuint m_quad, m_quadTex;
+    GLuint m_fbo;
+    GLuint m_ubo;
+    GLuint m_renderColor;
+    GLuint m_renderDepth;
+    GLuint textureID;
+
+    LDIShader m_fboPass;
+    LDIShader m_basicPass;
+
+//    std::vector<pixel_frag> getPixelFrags(box viewBox, float width, float height);
+//    std::vector<pixel_frag> getPixelFrags_2(glm::vec3 camCenter, glm::vec3 normal, glm::vec3 upDir, float height, float width, float depth, float x_resolution, float y_resolution);
+
+//    /////////////// DEV PART /////////////
+//    void updateOptMultiGradients_2(GLuint nb_divide);
+//    void updateOptGradients();
+//    void updateOptMultiGradients(GLuint nb_divide);
+//    void updateOptGradientsDisplacement();
+//    void getOptFrags();
+//    void getOptFragsFromIntervals();
+//    void freeOptGradientsBuffers();
+//    void freeOptMultiGradientsBuffers();
+//    void getNbPixels(box viewBox);
+//    void hashPixelsDisplacement();
+//    void rasterizationOptDisplacement();
+
+//    void setBoundingBox(glm::vec3 min, glm::vec3 max);
+//    void setResolution(float resolution);
+//    void updateViewport(box viewbox);
+//    void resetViewport();
+//    int m_nbPixels;
+//    box m_xViewBox, m_yViewBox, m_zViewBox;
 
 
 //    GLuint ssbo_out_mat, ssbo_radixCounters, ssbo_radixScannedCounters;
@@ -57,22 +100,26 @@ public:
 
 
 private:
-    /////////////// COMMON PART /////////////
-    int estimateNbFragments(box viewBox);
-    void updateIndirectBuffer(GLuint abo);
+    void draw();
+//    void initOrthogonalView();
+//    void bindOrthogonalView();
 
-    std::vector<LDIMesh*> m_meshes;
-    unsigned int m_screenHeight, m_screenWidth;
-//    unsigned int m_nb_fragments;
-//    int m_estimatedNbFragments, m_Render, m_Display, m_Direction;
-//    GLuint xVAO, xVBO, yVAO, yVBO, zVAO, zVBO, m_fbo;
-//    GLuint ssbo_fragments, ssbo_hashTable, ssbo_offsets;
-//    GLuint ssbo_indirect;
-//    GLint m_viewport[4];
-//    std::string m_shaderPath;
-    LDIShader m_surfaceShader, m_indirectShader;
-    std::vector<uint32_t> m_offsets;
-    std::vector<uint64_t> m_vHash;
+//    /////////////// COMMON PART /////////////
+//    int estimateNbFragments(box viewBox);
+//    void updateIndirectBuffer(GLuint abo);
+
+//    std::vector<LDIMesh*> m_meshes;
+//    unsigned int m_screenHeight, m_screenWidth;
+////    unsigned int m_nb_fragments;
+////    int m_estimatedNbFragments, m_Render, m_Display, m_Direction;
+////    GLuint xVAO, xVBO, yVAO, yVBO, zVAO, zVBO, m_fbo;
+////    GLuint ssbo_fragments, ssbo_hashTable, ssbo_offsets;
+////    GLuint ssbo_indirect;
+////    GLint m_viewport[4];
+////    std::string m_shaderPath;
+//    LDIShader m_surfaceShader, m_indirectShader;
+//    std::vector<uint32_t> m_offsets;
+//    std::vector<uint64_t> m_vHash;
 
     /////////////// VOXELIZATION PART /////////////
 //    void initializePixelFrags(glm::vec3 camCenter, glm::vec3 normal, glm::vec3 upDir, float height, float width,
@@ -116,8 +163,6 @@ private:
 //    void getOptSparseGradientsData();
 //    void getOptSparseMultiGradientsData();
 
-//    void getNbPixelFrags(glm::vec3 camCenter, glm::vec3 normal, glm::vec3 upDir, float height, float width,
-//                               float depth);
 //    void hashPixels();
 //    void buildPrefixSums();
 //    void rasterizationOpt();
@@ -168,7 +213,10 @@ private:
 
 //    glm::vec3 m_scene_min, m_scene_max;
 //    GLuint ssbo_octree;
-//    LDIShader m_svoAllocShader, m_svoFlagShader, m_svoInitShader;
+    //    LDIShader m_svoAllocShader, m_svoFlagShader, m_svoInitShader;
 };
+
+typedef typename LDIModel::orthoView orthoView;
+typedef typename LDIModel::pixel_frag pixel_frag;
 
 #endif

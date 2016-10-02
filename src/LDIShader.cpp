@@ -112,7 +112,3 @@ GLuint LDIShader::compileKernel(const std::string &shaderPath, GLenum shaderType
 
     return shader;
 }
-
-//void LDIShader::use() {
-//    glUseProgram(program);
-//}
