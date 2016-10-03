@@ -9,9 +9,9 @@
 #include <GL/glew.h>
 
 enum LDI_SHADER_ENUMS {
+    LDI_SHADER_C,
     LDI_SHADER_VF,
     LDI_SHADER_VGF,
-    LDI_SHADER_C,
     LDI_SHADER_VTCTEF,
     LDI_SHADER_VTCTEGF
 };

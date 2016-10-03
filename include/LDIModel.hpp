@@ -10,22 +10,22 @@
 #include "LDIMesh.hpp"
 #include "LDIShader.hpp"
 
-//enum LDI_ENUMS
-//{
-//    LDI_BINDING_HASHTABLE,
-//    LDI_BINDING_OFFSETS,
-//    LDI_BINDING_PREFIX_SUMS,
-//    LDI_BINDING_SUMS,
-//    LDI_BINDING_ATOMIC_COUNTERS,
-//    LDI_BINDING_OPT_FRAGS,
-//    LDI_BINDING_GRADIENTS,
-//    LDI_BINDING_SPARSE_GRADIENTS,
-//    LDI_BINDING_ZERO_FLOAT,
-//    LDI_BINDING_ZERO_UINT,
-//    LDI_BINDING_ZERO_UINT64,
-//    LDI_BINDING_BBOX,
-//    LDI_BINDING_FRITES
-//};
+enum LDI_ENUMS
+{
+    LDI_BINDING_HASHTABLE,
+    LDI_BINDING_OFFSETS,
+    LDI_BINDING_PREFIX_SUMS,
+    LDI_BINDING_SUMS,
+    LDI_BINDING_ATOMIC_COUNTERS,
+    LDI_BINDING_OPT_FRAGS,
+    LDI_BINDING_GRADIENTS,
+    LDI_BINDING_SPARSE_GRADIENTS,
+    LDI_BINDING_ZERO_FLOAT,
+    LDI_BINDING_ZERO_UINT,
+    LDI_BINDING_ZERO_UINT64,
+    LDI_BINDING_BBOX,
+    LDI_BINDING_FRITES
+};
 
 class LDIModel {
 public:
@@ -50,7 +50,10 @@ public:
     ~LDIModel();
 
     void setOrthogonalView(const orthoView &view);
-    int getNbPixelFrags();
+
+    // get Pixels Frags
+    unsigned int getNbPixelFrags();
+    void hashPixels(unsigned int nbPixels);
     std::vector<pixel_frag> getPixelFrags();
 
     std::vector<LDIMesh*> m_meshes;
@@ -65,7 +68,9 @@ public:
     GLuint m_renderColor;
     GLuint m_renderDepth;
 
-    LDIShader m_fboPass;
+    LDIShader m_shaderFrameBuffer;
+    LDIShader m_shaderInitPixelHashTable;
+    LDIShader m_shaderFillPixelHashTable;
 
 //    std::vector<pixel_frag> getPixelFrags(box viewBox, float width, float height);
 //    std::vector<pixel_frag> getPixelFrags_2(glm::vec3 camCenter, glm::vec3 normal, glm::vec3 upDir, float height, float width, float depth, float x_resolution, float y_resolution);
@@ -93,7 +98,6 @@ public:
 
 //    GLuint ssbo_out_mat, ssbo_radixCounters, ssbo_radixScannedCounters;
 //    GLuint m_nbBlocks, m_nbElementsToSort;
-
 
 private:
     void draw();

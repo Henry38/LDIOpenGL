@@ -29,6 +29,8 @@ set(SHADER_FILES
     shaders/ldi_fboPass.frag
     shaders/fboPass.vert
     shaders/fboPass.frag
+    shaders/initPixelHashTable.glsl
+    shaders/fillPixelHashTable.frag
 )
 
 #================= Libraries Dependancies =================#

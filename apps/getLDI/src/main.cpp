@@ -100,9 +100,11 @@ int main() {
     view.depth = 20;
     LDIModel ldiModel(vLDIMesh, view, 0.1f, 0.1f);
 
-    int nb = ldiModel.getNbPixelFrags();
-    std::cout << nb << " pixels rendus dans le fbo" << std::endl;
-    glViewport(0, 0, width, height);
+    std::vector<LDIModel::pixel_frag> pixelFrags = ldiModel.getPixelFrags();
+    std::cout << "info: " << pixelFrags.size() << " fragments recperes" << std::endl;
+    //int nb = ldiModel.getNbPixelFrags();
+    //std::cout << nb << " pixels rendus dans le fbo" << std::endl;
+    //glViewport(0, 0, width, height);
 
     ///////////////////////////////////////////////////////////////////////////
     // Creation du vaoQuad pour afficher le frameBuffer
