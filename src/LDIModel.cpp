@@ -133,31 +133,6 @@ unsigned int LDIModel::getNbPixelFrags()
 // initialise et rempli la hash table
 void LDIModel::hashPixels(unsigned int nbPixels)
 {
-//    GLuint program = m_zeroInitializationUint64Shader.getProgramID();
-//    glUseProgram(program);
-
-//    GLuint binding_point_index = 2;
-//    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding_point_index, ssbo_pixelHashTable);
-
-//    glUniform1ui(glGetUniformLocation(program, "NB_PIXELS"), nbPixels);
-//    glDispatchCompute(nbPixels/256 + 1, 1, 1);
-
-//    m_pixelHashShader.use();
-//    bindSSBO(ssbo_pixelHashTable, LDI_BINDING_HASHTABLE);
-//    initSSBO_offset(&ssbo_offsets, m_offsets, LDI_BINDING_OFFSETS);
-//    bindOrthogonalOptView(m_pixelHashShader.program, m_optProjMat, m_optViewMat,
-//                          m_optModelMat);
-//    glUniform1ui(glGetUniformLocation(m_pixelHashShader.program, "H"), nbPixels);
-//    //glUniform1i(glGetUniformLocation(m_pixelHashShader.program, "SCREEN_WIDTH"), m_screenWidth);
-//    glUniform1i(glGetUniformLocation(m_pixelHashShader.program, "SCREEN_WIDTH"), m_screenHeight);
-//    glUniform1ui(glGetUniformLocation(m_pixelHashShader.program, "MAX_AGE"), m_max_age);
-//    //draw call
-//    for(unsigned int i = 0; i < m_meshes.size(); ++i) {
-//        m_meshes[i]->draw();
-//    }
-//    glFinish();
-
-//    glUseProgram(0);
 }
 
 // Warning, change le viewport d'OpenGL
@@ -204,8 +179,10 @@ std::vector<pixel_frag> LDIModel::getPixelFrags()
 
     unsigned int dim_x = std::ceil( maxPixels/256.0f );
     glDispatchCompute(dim_x, 1, 1);
-    glFinish();
 
+    ///////////////////////////////////////////////////////////////////////////
+    // Creation d'un atomic counter
+    // (compte le nombre de passe dans le fragment shader)
     GLuint atomic_counter;
     glGenBuffers(1, &atomic_counter);
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomic_counter);
@@ -242,8 +219,6 @@ std::vector<pixel_frag> LDIModel::getPixelFrags()
     GLuint* ac_ptr = (GLuint*) glMapBuffer(GL_ATOMIC_COUNTER_BUFFER, GL_READ_ONLY);
     std::memcpy(&ac, ac_ptr, sizeof(GLuint));
     glUnmapBuffer(GL_ATOMIC_COUNTER_BUFFER);
-
-    std::cout << "fragment pass calculee : " << ac << std::endl;
 
     glDeleteBuffers(1, &atomic_counter);
     glDeleteBuffers(1, &ssbo_pixelHashTable);

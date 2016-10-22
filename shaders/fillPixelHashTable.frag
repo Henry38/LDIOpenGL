@@ -17,7 +17,7 @@ void main()
     int n = int((screenPixel.y * width) + screenPixel.x);
 
     atomicCounterIncrement(counter);
-    //pixelHashTable[n] += 1;
+    atomicAdd(pixelHashTable[n], 1);
 
     color = vec4(0,0,0,1);
 }
