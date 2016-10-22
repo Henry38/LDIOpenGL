@@ -30,8 +30,8 @@
 #endif
 
 const int framerate = 20;
-const GLuint screenWidth = 2*320;
-const GLuint screenHeight = 2*240;
+const GLuint screenWidth = 640;
+const GLuint screenHeight = 480;
 GLFWwindow* window;
 
 GLuint vaoQuad, quad, quadTex;
@@ -101,7 +101,7 @@ int main() {
     LDIModel ldiModel(vLDIMesh, view, 0.1f, 0.1f);
 
     std::vector<LDIModel::pixel_frag> pixelFrags = ldiModel.getPixelFrags();
-    std::cout << "info: " << pixelFrags.size() << " fragments recperes" << std::endl;
+    std::cout << "info: " << pixelFrags.size() << " fragments recuperes" << std::endl;
     //int nb = ldiModel.getNbPixelFrags();
     //std::cout << nb << " pixels rendus dans le fbo" << std::endl;
     //glViewport(0, 0, width, height);
@@ -175,8 +175,6 @@ int main() {
     for (unsigned int i = 0; i < vLDIMesh.size(); ++i) {
         LDIMesh::destroy( vLDIMesh[i] );
     }
-
-//    glDeleteBuffers(1, &ubo);
 
     destroyFrameBuffer();
 
