@@ -86,19 +86,27 @@ int main() {
     ///////////////////////////////////////////////////////////////////////////
     // Creation des meshes (vao, vbo, ...)
     std::vector<LDIMesh*> vLDIMesh;
-    std::string objFilename1 = CWD + std::string("/models/dragon_low.obj");
+    //std::string objFilename1 = CWD + std::string("/models/dragon_low.obj");
+    std::string objFilename1 = CWD + std::string("/models/cube.obj");
     LDIMesh *ldiMesh1 = LDIMesh::fromObj(objFilename1);
     vLDIMesh.push_back(ldiMesh1);
 
     // Creation du LDIModel
     LDIModel::orthoView view;
-    view.camCenter = glm::vec3(0,0,6);
+    view.camCenter = glm::vec3(0,0,2);
     view.normalDir = glm::vec3(0,0,-1);
     view.upDir = glm::vec3(0,1,0);
-    view.width = 20;
-    view.height = 20;
-    view.depth = 20;
-    LDIModel ldiModel(vLDIMesh, view, 0.1f, 0.1f);
+    view.width = 2;
+    view.height = 2;
+    view.depth = 4;
+    LDIModel ldiModel(vLDIMesh, view, 1.0f, 1.0f);
+//    view.camCenter = glm::vec3(0,0,6);
+//    view.normalDir = glm::vec3(0,0,-1);
+//    view.upDir = glm::vec3(0,1,0);
+//    view.width = 20;
+//    view.height = 20;
+//    view.depth = 20;
+//    LDIModel ldiModel(vLDIMesh, view, 0.1f, 0.1f);
 
     std::vector<LDIModel::pixel_frag> pixelFrags = ldiModel.getPixelFrags();
     std::cout << "info: " << pixelFrags.size() << " fragments recuperes" << std::endl;

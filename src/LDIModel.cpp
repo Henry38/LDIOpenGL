@@ -334,7 +334,7 @@ std::vector<pixel_frag> LDIModel::getPixelFrags()
     std::memcpy(vPixelFrag.data(), ssbo_pixelFrag_ptr, nbPixelFrag*sizeof(pixel_frag));
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
-    for (unsigned int i = 0; i < 5; ++i) {
+    for (unsigned int i = 0; i < vPixelFrag.size(); ++i) {
         pixel_frag& p = vPixelFrag[i];
         std::cout << p.m_i << ", " << p.m_j << " : " << p.m_z << std::endl;
     }
