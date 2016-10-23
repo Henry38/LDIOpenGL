@@ -33,6 +33,8 @@ set(SHADER_FILES
     shaders/fillPixelHashTable.frag
     shaders/initPrefixSum.glsl
     shaders/prefixSum.glsl
+    shaders/initPixelFrag.glsl
+    shaders/fillPixelFrag.frag
 )
 
 #================= Libraries Dependancies =================#

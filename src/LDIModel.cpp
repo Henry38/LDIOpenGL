@@ -18,7 +18,9 @@ LDIModel::LDIModel(const std::vector<LDIMesh*> &vLDIMeshes, const orthoView &vie
     m_shaderInitPixelHashTable({"initPixelHashTable.glsl"}, LDI_SHADER_C),
     m_shaderFillPixelHashTable({"ldi_fboPass.vert", "fillPixelHashTable.frag"}, LDI_SHADER_VF),
     m_shaderInitPrefixSum({"initPrefixSum.glsl"}, LDI_SHADER_C),
-    m_shaderPrefixSum({"prefixSum.glsl"}, LDI_SHADER_C)
+    m_shaderPrefixSum({"prefixSum.glsl"}, LDI_SHADER_C),
+    m_shaderInitPixelFrag({"initPixelFrag.glsl"}, LDI_SHADER_C),
+    m_shaderPixelFrag({"ldi_fboPass.vert", "fillPixelFrag.frag"}, LDI_SHADER_VF)
 {
     m_screenWidth = std::ceil(view.width / m_x_resolution);
     m_screenHeight = std::ceil(view.height / m_y_resolution);
@@ -27,6 +29,7 @@ LDIModel::LDIModel(const std::vector<LDIMesh*> &vLDIMeshes, const orthoView &vie
 
     GLint shaderFrameBufferProg = m_shaderFrameBuffer.getProgramID();
     GLint shaderFillPixelHashTableProg = m_shaderFillPixelHashTable.getProgramID();
+    GLint shaderPixelFragProg = m_shaderPixelFrag.getProgramID();
 
     ///////////////////////////////////////////////////////////////////////////
     // Creation d'un uniform buffer object
@@ -52,6 +55,10 @@ LDIModel::LDIModel(const std::vector<LDIMesh*> &vLDIMeshes, const orthoView &vie
     glUseProgram(shaderFillPixelHashTableProg);
     block_index = glGetUniformBlockIndex(shaderFillPixelHashTableProg, "projection");
     glUniformBlockBinding(shaderFillPixelHashTableProg, block_index, binding_ubo_point_index);
+
+    glUseProgram(shaderPixelFragProg);
+    block_index = glGetUniformBlockIndex(shaderPixelFragProg, "projection");
+    glUniformBlockBinding(shaderPixelFragProg, block_index, binding_ubo_point_index);
 
     glUseProgram(0);
 
@@ -149,6 +156,7 @@ void LDIModel::hashPixels(unsigned int nbPixels)
 //      3 = ssbo pixelHashTable
 //      4 = atomic_counter
 //      5 = ssbo_prefixSum
+//      6 = ssbo_pixelFrag
 std::vector<pixel_frag> LDIModel::getPixelFrags()
 {
     GLint old_program;
@@ -161,18 +169,19 @@ std::vector<pixel_frag> LDIModel::getPixelFrags()
     glViewport(0, 0, m_screenWidth, m_screenHeight);
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
 
-    std::vector<pixel_frag> pixelFrags(0);
-
-    unsigned int nbPixels = getNbPixelFrags();
-    std::cout << "OpenGL: " << nbPixels << " pixels rasterises" << std::endl;
-    if (nbPixels == 0) {
+    unsigned int nbPixelFrag = getNbPixelFrags();
+    std::cout << "OpenGL: " << nbPixelFrag << " pixels rasterises" << std::endl;
+    if (nbPixelFrag == 0) {
         return std::vector<pixel_frag>(0);
     }
 
     GLint programInitPixelHashTable = m_shaderInitPixelHashTable.getProgramID();
     GLint programFillPixelHashTable = m_shaderFillPixelHashTable.getProgramID();
-    GLint programInitPrefixSum = m_shaderInitPrefixSum.getProgramID();
-    GLint programPrefixSum = m_shaderPrefixSum.getProgramID();
+    //GLint programInitPrefixSum = m_shaderInitPrefixSum.getProgramID();
+    //GLint programPrefixSum = m_shaderPrefixSum.getProgramID();
+    GLint programInitPixelFrag = m_shaderInitPixelFrag.getProgramID();
+    GLint programPixelFrag = m_shaderPixelFrag.getProgramID();
+
     unsigned int maxPixels = m_screenWidth * m_screenHeight;
 
     /// Build pixelHashTable
@@ -281,25 +290,56 @@ std::vector<pixel_frag> LDIModel::getPixelFrags()
 //    dim_x = std::ceil( maxPixels/1024.0f ) + 1;
 //    glDispatchCompute(dim_x, 1, 1);
 
-//    /// Build pixelFragTable
-//    ///////////////////////////////////////////////////////////////////////////
-//    // Creation d'un shader storage buffer object
-//    // (initialisation du prefix sum)
-//    GLuint ssbo_pixelFragTable;
-//    glGenBuffers(1, &ssbo_pixelFragTable);
-//    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_pixelFragTable);
-//    glBufferData(GL_SHADER_STORAGE_BUFFER, maxPixels*sizeof(pixel_frag), NULL, GL_STATIC_DRAW);
-//    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    /// Build pixelFragTable
+    ///////////////////////////////////////////////////////////////////////////
+    // Creation d'un shader storage buffer object
+    // (initialisation du tableau des pixel_frag)
+    GLuint ssbo_pixelFrag;
+    glGenBuffers(1, &ssbo_pixelFrag);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_pixelFrag);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, nbPixelFrag*sizeof(pixel_frag), NULL, GL_DYNAMIC_COPY);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    // Bind le ssbo_pixelFrag a l'index 6 dans la table de liaison d'OpenGL
+    GLuint bind_ssbo3_point_index = 6;
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bind_ssbo3_point_index, ssbo_pixelFrag);
+
+    glUseProgram(programInitPixelFrag);
+    GLuint maxPixelFragLoc = glGetUniformLocation(programInitPixelFrag, "max_pixelFrag");
+    glUniform1ui(maxPixelFragLoc, nbPixelFrag);
+
+    dim_x = std::ceil( nbPixelFrag/256.0f ) + 1;
+    glDispatchCompute(dim_x, 1, 1);
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Remplissage du shader storage buffer object
+    // (creation des pixel_frag dans la strucutre de donnees)
+    glUseProgram(programPixelFrag);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    screenWidthLoc = glGetUniformLocation(programPixelFrag, "screen_width");
+    glUniform1ui(screenWidthLoc, m_screenWidth);
+
+    draw();
+
+    // fetch ssbo_pixelFrag
+    std::vector<pixel_frag> pixelFrag(nbPixelFrag);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_pixelFrag);
+    GLuint* ssbo_pixelFrag_ptr = (GLuint*) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+    std::memcpy(pixelFrag.data(), ssbo_pixelFrag_ptr, nbPixelFrag*sizeof(pixel_frag));
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+//    for (unsigned int i = 0; i < 5; ++i) {
+//        pixel_frag& p = pixelFrag[i];
+//        std::cout << p.m_i << ", " << p.m_j << " : " << p.m_z << std::endl;
+//    }
 
     glUseProgram(0);
 
-    //// Render ldi fragment in a ssbo ?
-
-
     glDeleteBuffers(1, &atomic_counter);
+    glDeleteBuffers(1, &ssbo_pixelFrag);
     glDeleteBuffers(1, &ssbo_prefixSum);
     glDeleteBuffers(1, &ssbo_pixelHashTable);
-
 
     // discutable
     glEnable(GL_DEPTH_TEST);
@@ -308,56 +348,7 @@ std::vector<pixel_frag> LDIModel::getPixelFrags()
     glUseProgram(old_program);
     glViewport(old_viewport[0], old_viewport[1], old_viewport[2], old_viewport[3]);
 
-    return pixelFrags;
-
-//    GLsizei height_nb = (int)(height/y_resolution);
-//    GLsizei width_nb = (int)(width/x_resolution);
-//    glGetIntegerv(GL_VIEWPORT, m_viewport);
-//    glViewport(0, 0, width_nb, height_nb);
-//    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-//    m_screenWidth = width_nb;
-//    m_screenHeight = height_nb;
-//    bindFBOWA(m_fbo, m_screenWidth, m_screenHeight);
-//    //rasterization
-//    getNbPixelFrags(camCenter, normal, upDir, height, width, depth);
-//    //std::cout<<"getPixelFrags_2: m_nbPixels: "<<m_nbPixels<<std::endl;
-//    if(m_nbPixels == 0)
-//    {
-//        //deleteFBOWA(&m_fbo);
-//        debindFBOWA();
-//        return m_pixelFrags;
-//    }
-//    unsigned int estimated_memory_usage = 16*4 + m_nbPixels*8 +
-//            m_nbPixels*4 + (m_nbPixels/2048+1)*4 + m_nbPixels*4 + m_nbPixels*64;
-//    //std::cout<<"estimated_memory_usage: "<<estimated_memory_usage<<std::endl;
-//    if(estimated_memory_usage/1000 > getCurrentAvailableMemory()*0.8)
-//        return std::vector<pixel_frag>(0);
-//    hashPixels();
-//    buildPrefixSums();
-//    rasterizationOpt();
-//    bubbleSort();
-//    //fetch the output
-//    getOptFrags();
-//    m_pixelFrags.clear();
-//    m_pixelFrags.resize(m_optFrags.size());
-//    //std::cout<<m_screenHeight<<", "<<m_screenWidth<<std::endl;
-//    for(int i=0; i<m_pixelFrags.size(); i++)
-//    {
-//        GLuint key = m_optFrags[i].info_2[0];
-//        GLuint m_i = key/m_screenHeight;
-//        GLuint m_j = key-m_i*m_screenHeight;
-//        m_pixelFrags[i].m_i = m_i;
-//        m_pixelFrags[i].m_j = m_j;
-//        m_pixelFrags[i].m_z = m_optFrags[i].info_2[1];
-//        m_pixelFrags[i].m_idObj = m_optFrags[i].info_1[0] & 0x3FFFFFFF;
-//        //std::cout<<m_i<<", "<<m_j<<", "<<m_pixelFrags[i].m_z<<std::endl;
-//        //std::cout<<m_optFrags[i].info_3[0]<<std::endl;
-//    }
-//    freeOptGradientsBuffers();
-//    //deleteFBOWA(&m_fbo);
-//    debindFBOWA();
-//    resetViewport();
-//    return m_pixelFrags;
+    return pixelFrag;
 }
 
 void LDIModel::draw()
