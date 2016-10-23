@@ -16,7 +16,9 @@ LDIModel::LDIModel(const std::vector<LDIMesh*> &vLDIMeshes, const orthoView &vie
     m_screenWidth(0), m_screenHeight(0),
     m_shaderFrameBuffer({"ldi_fboPass.vert", "ldi_fboPass.frag"}, LDI_SHADER_VF),
     m_shaderInitPixelHashTable({"initPixelHashTable.glsl"}, LDI_SHADER_C),
-    m_shaderFillPixelHashTable({"ldi_fboPass.vert", "fillPixelHashTable.frag"}, LDI_SHADER_VF)
+    m_shaderFillPixelHashTable({"ldi_fboPass.vert", "fillPixelHashTable.frag"}, LDI_SHADER_VF),
+    m_shaderInitPrefixSum({"initPrefixSum.glsl"}, LDI_SHADER_C),
+    m_shaderPrefixSum({"prefixSum.glsl"}, LDI_SHADER_C)
 {
     m_screenWidth = std::ceil(view.width / m_x_resolution);
     m_screenHeight = std::ceil(view.height / m_y_resolution);
@@ -135,7 +137,18 @@ void LDIModel::hashPixels(unsigned int nbPixels)
 {
 }
 
+//void LDIModel::prefixSum()
+//{
+//}
+
 // Warning, change le viewport d'OpenGL
+// Table de liaison OpenGL:
+//      0 = nothing
+//      1 = nothing
+//      2 = nothing
+//      3 = ssbo pixelHashTable
+//      4 = atomic_counter
+//      5 = ssbo_prefixSum
 std::vector<pixel_frag> LDIModel::getPixelFrags()
 {
     GLint old_program;
@@ -156,28 +169,31 @@ std::vector<pixel_frag> LDIModel::getPixelFrags()
         return std::vector<pixel_frag>(0);
     }
 
-    GLint programInit = m_shaderInitPixelHashTable.getProgramID();
-    GLint programFill = m_shaderFillPixelHashTable.getProgramID();
+    GLint programInitPixelHashTable = m_shaderInitPixelHashTable.getProgramID();
+    GLint programFillPixelHashTable = m_shaderFillPixelHashTable.getProgramID();
+    GLint programInitPrefixSum = m_shaderInitPrefixSum.getProgramID();
+    GLint programPrefixSum = m_shaderPrefixSum.getProgramID();
     unsigned int maxPixels = m_screenWidth * m_screenHeight;
 
+    /// Build pixelHashTable
     ///////////////////////////////////////////////////////////////////////////
     // Creation d'un shader storage buffer object
     // (initialisation de la table de hashage)
     GLuint ssbo_pixelHashTable;
     glGenBuffers(1, &ssbo_pixelHashTable);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_pixelHashTable);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, maxPixels*sizeof(unsigned int), NULL, GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, maxPixels*sizeof(GLuint), NULL, GL_STATIC_DRAW);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    // Bind le ssbo a l'index 3 dans la table de liaison d'OpenGL
-    GLuint binding_ssbo_point_index = 3;
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding_ssbo_point_index, ssbo_pixelHashTable);
+    // Bind le ssbo_pixelHashTable a l'index 3 dans la table de liaison d'OpenGL
+    GLuint binding_ssbo1_point_index = 3;
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding_ssbo1_point_index, ssbo_pixelHashTable);
 
-    glUseProgram(programInit);
-    GLuint maxLoc = glGetUniformLocation(programInit, "max");
-    glUniform1ui(maxLoc, maxPixels);
+    glUseProgram(programInitPixelHashTable);
+    GLuint maxPixelsLoc = glGetUniformLocation(programInitPixelHashTable, "max_pixels");
+    glUniform1ui(maxPixelsLoc, maxPixels);
 
-    unsigned int dim_x = std::ceil( maxPixels/256.0f );
+    unsigned int dim_x = std::ceil( maxPixels/256.0f ) + 1;
     glDispatchCompute(dim_x, 1, 1);
 
     ///////////////////////////////////////////////////////////////////////////
@@ -196,40 +212,94 @@ std::vector<pixel_frag> LDIModel::getPixelFrags()
     ///////////////////////////////////////////////////////////////////////////
     // Remplissage du shader storage buffer object
     // (indique le nombre de fragments presents dans chaque pixel)
-    glUseProgram(programFill);
+    glUseProgram(programFillPixelHashTable);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    GLuint widthLoc = glGetUniformLocation(programFill, "width");
-    glUniform1ui(widthLoc, m_screenWidth);
+    GLuint screenWidthLoc = glGetUniformLocation(programFillPixelHashTable, "screen_width");
+    glUniform1ui(screenWidthLoc, m_screenWidth);
 
     draw();
 
-    glUseProgram(0);
-
-    // fetch ssbo
+    // fetch ssbo_pixelHashTable
     std::vector<unsigned int> v(maxPixels);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_pixelHashTable);
     GLuint* ssbo_ptr = (GLuint*) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
     std::memcpy(v.data(), ssbo_ptr, maxPixels*sizeof(GLuint));
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
-    // fetch atomic counter
-    GLuint ac;
-    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomic_counter);
-    GLuint* ac_ptr = (GLuint*) glMapBuffer(GL_ATOMIC_COUNTER_BUFFER, GL_READ_ONLY);
-    std::memcpy(&ac, ac_ptr, sizeof(GLuint));
-    glUnmapBuffer(GL_ATOMIC_COUNTER_BUFFER);
+//    // fetch atomic_counter
+//    GLuint counter;
+//    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomic_counter);
+//    GLuint* ac_ptr = (GLuint*) glMapBuffer(GL_ATOMIC_COUNTER_BUFFER, GL_READ_ONLY);
+//    std::memcpy(&counter, ac_ptr, sizeof(GLuint));
+//    glUnmapBuffer(GL_ATOMIC_COUNTER_BUFFER);
+
+//    unsigned int n = 0;
+//    for (unsigned int i = 0; i < v.size(); ++i) {
+//        n += v[i];
+//    }
+//    // n == counter == nbPixels
+
+    /// Build prefixSum
+    ///////////////////////////////////////////////////////////////////////////
+    // Creation d'un shader storage buffer object
+    // (initialisation du prefix sum)
+    GLuint ssbo_prefixSum;
+    glGenBuffers(1, &ssbo_prefixSum);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_prefixSum);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, maxPixels*sizeof(GLuint), NULL, GL_STATIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    // Bind le ssbo_prefixSum a l'index 5 dans la table de liaison d'OpenGL
+    GLuint bind_ssbo2_point_index = 5;
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bind_ssbo2_point_index, ssbo_prefixSum);
+
+    // technique du lache
+    for (unsigned int i = 1; i < v.size(); ++i) {
+        v[i] += v[i-1];
+    }
+    // v[v.size-1] == counter
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_prefixSum);
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, maxPixels*sizeof(GLuint), v.data());
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+//    glUseProgram(programInitPrefixSum);
+//    maxPixelsLoc = glGetUniformLocation(programInitPixelHashTable, "max_pixels");
+//    glUniform1ui(maxPixelsLoc, maxPixels);
+
+//    dim_x = std::ceil( maxPixels/256.0f ) + 1;
+//    glDispatchCompute(dim_x, 1, 1);
+
+//    ///////////////////////////////////////////////////////////////////////////
+//    // Remplissage du shader storage buffer object
+//    // (calcul du prefix sum)
+//    glUseProgram(programPrefixSum);
+//    maxPixelsLoc = glGetUniformLocation(programPrefixSum, "max_pixels");
+//    glUniform1ui(maxPixelsLoc, maxPixels);
+
+//    dim_x = std::ceil( maxPixels/1024.0f ) + 1;
+//    glDispatchCompute(dim_x, 1, 1);
+
+//    /// Build pixelFragTable
+//    ///////////////////////////////////////////////////////////////////////////
+//    // Creation d'un shader storage buffer object
+//    // (initialisation du prefix sum)
+//    GLuint ssbo_pixelFragTable;
+//    glGenBuffers(1, &ssbo_pixelFragTable);
+//    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_pixelFragTable);
+//    glBufferData(GL_SHADER_STORAGE_BUFFER, maxPixels*sizeof(pixel_frag), NULL, GL_STATIC_DRAW);
+//    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    glUseProgram(0);
+
+    //// Render ldi fragment in a ssbo ?
+
 
     glDeleteBuffers(1, &atomic_counter);
+    glDeleteBuffers(1, &ssbo_prefixSum);
     glDeleteBuffers(1, &ssbo_pixelHashTable);
 
-    unsigned int n = 0;
-    for (unsigned int i = 0; i < v.size(); ++i) {
-        n += v[i];
-    }
-    std::cout << n << std::endl;
-
-    //hashPixels(nbPixels);
 
     // discutable
     glEnable(GL_DEPTH_TEST);

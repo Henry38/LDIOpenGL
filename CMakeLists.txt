@@ -31,6 +31,8 @@ set(SHADER_FILES
     shaders/fboPass.frag
     shaders/initPixelHashTable.glsl
     shaders/fillPixelHashTable.frag
+    shaders/initPrefixSum.glsl
+    shaders/prefixSum.glsl
 )
 
 #================= Libraries Dependancies =================#

@@ -71,6 +71,8 @@ public:
     LDIShader m_shaderFrameBuffer;
     LDIShader m_shaderInitPixelHashTable;
     LDIShader m_shaderFillPixelHashTable;
+    LDIShader m_shaderInitPrefixSum;
+    LDIShader m_shaderPrefixSum;
 
 //    std::vector<pixel_frag> getPixelFrags(box viewBox, float width, float height);
 //    std::vector<pixel_frag> getPixelFrags_2(glm::vec3 camCenter, glm::vec3 normal, glm::vec3 upDir, float height, float width, float depth, float x_resolution, float y_resolution);
