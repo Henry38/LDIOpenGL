@@ -107,7 +107,7 @@ GLuint LDIShader::compileKernel(const std::string &shaderPath, GLenum shaderType
     {
         GLchar infoLog[512];
         glGetShaderInfoLog(shader, 512, NULL, infoLog);
-        std::cout<<"Erreur lors de la compilation du shader : " << shaderPath << " : " << infoLog << std::endl;
+        std::cout << "Erreur lors de la compilation du shader : " << shaderPath << " : " << infoLog << std::endl;
     }
 
     return shader;
