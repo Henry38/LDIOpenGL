@@ -1,8 +1,0 @@
-//EXTENSIONS
-#extension GL_NV_gpu_shader5 : enable
-#extension GL_NV_shader_atomic_int64 : enable
-#extension GL_NV_shader_atomic_float : enable
-#extension GL_NV_vertex_attrib_integer_64bit : enable
-#extension GL_NV_shader_thread_group : enable
-#extension GL_NV_shader_thread_group : enable
-#extension GL_NV_shader_thread_shuffle : enable
