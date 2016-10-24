@@ -23,8 +23,8 @@ LDIModel::LDIModel(const std::vector<LDIMesh*> &vLDIMeshes, const orthoView &vie
 {
     m_screenWidth = std::ceil(view.width / m_x_resolution);
     m_screenHeight = std::ceil(view.height / m_y_resolution);
-//    std::cout << "width: " << m_screenWidth << std::endl;
-//    std::cout << "height: " << m_screenHeight << std::endl;
+    std::cout << "width: " << m_screenWidth << std::endl;
+    std::cout << "height: " << m_screenHeight << std::endl;
 
     ///////////////////////////////////////////////////////////////////////////
     // Creation d'un uniform buffer object
@@ -158,7 +158,7 @@ void LDIModel::hashPixel(GLuint &ssbo_pixelHashTable, unsigned int maxPixel)
     GLuint maxPixelsLoc = glGetUniformLocation(programInitPixelHashTable, "max_pixels");
     glUniform1ui(maxPixelsLoc, maxPixel);
 
-    unsigned int dim_x = std::ceil( maxPixel/256.0f ) + 1;
+    unsigned int dim_x = std::ceil( maxPixel/256.0f );
     glDispatchCompute(dim_x, 1, 1);
 
 //    ///////////////////////////////////////////////////////////////////////////
@@ -308,19 +308,31 @@ std::vector<pixel_frag> LDIModel::getPixelFrags()
     std::memcpy(v.data(), ssbo_pixelHashTable_ptr, maxPixel*sizeof(GLuint));
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
+    // debug
+    for (uint i = 0; i < v.size(); ++i) {
+        std::cout << "hashTable --> " << i << ": " << v[i] << std::endl;
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     GLuint ssbo_prefixSum;
     prefixSum(ssbo_prefixSum, maxPixel);
 
+    std::vector<unsigned int> vSum(maxPixel);
+    vSum[0] = 0;
     // technique du lache
     // TODO : implementation sur GPU
-    for (unsigned int i = 1; i < v.size(); ++i) {
-        v[i] += v[i-1];
+    for (unsigned int i = 1; i < vSum.size(); ++i) {
+        vSum[i] = vSum[i-1] + v[i-1];
+    }
+
+    // debug
+    for (uint i = 0; i < v.size(); ++i) {
+        std::cout << "prefixSum --> " << i << ": " << vSum[i] << std::endl;
     }
 
     // update internal ssbo_prefixSum data
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_prefixSum);
-    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, maxPixel*sizeof(GLuint), v.data());
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, maxPixel*sizeof(GLuint), vSum.data());
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
     ///////////////////////////////////////////////////////////////////////////
@@ -335,7 +347,7 @@ std::vector<pixel_frag> LDIModel::getPixelFrags()
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
     for (unsigned int i = 0; i < vPixelFrag.size(); ++i) {
-        pixel_frag& p = vPixelFrag[i];
+        pixel_frag &p = vPixelFrag[i];
         std::cout << p.m_i << ", " << p.m_j << " : " << p.m_z << std::endl;
     }
 

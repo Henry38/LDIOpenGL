@@ -14,7 +14,7 @@ out vec4 color;
 void main()
 {
     vec2 screenPixel = gl_FragCoord.xy;
-    int n = int((screenPixel.y * screen_width) + screenPixel.x);
+    int n = int(((screenPixel.y-0.5) * screen_width) + (screenPixel.x-0.5));
 
     atomicCounterIncrement(counter);
     atomicAdd(pixelHashTable[n], 1);

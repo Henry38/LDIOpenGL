@@ -23,7 +23,7 @@ out vec4 color;
 void main()
 {
     vec2 screenPixel = gl_FragCoord.xy;
-    int n = int((screenPixel.y * screen_width) + screenPixel.x);
+    int n = int(((screenPixel.y-0.5) * screen_width) + (screenPixel.x-0.5));
 
     pixel_frag frag;
     frag.m_i = uint(screenPixel.x);
@@ -31,8 +31,8 @@ void main()
     frag.m_z = gl_FragCoord.z;
 
     uint pos = prefixSum[n];
-    pixelFrag[pos-1] = frag;
-    atomicAdd(prefixSum[n], -1);
+    pixelFrag[pos] = frag;
+    atomicAdd(prefixSum[n], 1);
 
     color = vec4(0,0,0,1);
 }

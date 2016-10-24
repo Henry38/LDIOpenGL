@@ -20,7 +20,7 @@ void main()
     uint id = gl_GlobalInvocationID.x;
 
     if (id < max_pixelFrag) {
-        pixelFrag[id].m_i = uint(1);
+        pixelFrag[id].m_i = uint(0);
         pixelFrag[id].m_j = uint(0);
         pixelFrag[id].m_z = float(0.0);
     }
