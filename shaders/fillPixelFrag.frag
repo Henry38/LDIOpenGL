@@ -30,9 +30,8 @@ void main()
     frag.m_j = uint(screenPixel.y);
     frag.m_z = gl_FragCoord.z;
 
-    uint pos = prefixSum[n];
+    uint pos = atomicAdd(prefixSum[n], 1);
     pixelFrag[pos] = frag;
-    atomicAdd(prefixSum[n], 1);
 
     color = vec4(0,0,0,1);
 }

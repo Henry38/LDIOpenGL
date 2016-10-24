@@ -42,6 +42,7 @@ public:
     ~LDIModel();
 
     void setOrthogonalView(const orthoView &view);
+    unsigned int getPixelPassed();
     std::vector<pixel_frag> getPixelFrags();
 
     std::vector<LDIMesh*> m_meshes;
@@ -56,6 +57,7 @@ public:
     GLuint m_renderDepth;
 
     LDIShader m_shaderFrameBuffer;
+    LDIShader m_shaderCountPixelFrag;
     LDIShader m_shaderInitPixelHashTable;
     LDIShader m_shaderFillPixelHashTable;
     LDIShader m_shaderInitPrefixSum;
@@ -67,7 +69,7 @@ private:
     LDIModel();
 
     // getPixelFrag
-    unsigned int getNbPixelFrag();
+    void getNbPixelFrag(GLuint &atomic_counter);
     void hashPixel(GLuint &ssbo_pixelHashTable, unsigned int maxPixel);
     void prefixSum(GLuint &ssbo_prefixSum, unsigned int maxPixel);
     void pixelFrag(GLuint &ssbo_pixelFrag, unsigned int nbPixelFrag);

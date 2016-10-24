@@ -29,6 +29,7 @@ set(SHADER_FILES
     shaders/ldi_fboPass.frag
     shaders/fboPass.vert
     shaders/fboPass.frag
+    shaders/countPixelFrag.frag
     shaders/initPixelHashTable.glsl
     shaders/fillPixelHashTable.frag
     shaders/initPrefixSum.glsl

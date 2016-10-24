@@ -3,7 +3,7 @@
 layout(location = 0) in vec3 vPosition;
 layout(location = 1) in vec3 vNormal;
 
-layout(std140, binding = 2) uniform projection
+layout(std140, binding = 1) uniform projection
 {
     mat4 projViewMat;
 };
