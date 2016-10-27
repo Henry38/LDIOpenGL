@@ -1,20 +1,18 @@
 #version 430 core
 
-// the following code com from openglsuperbible - sb6code
-
 layout (local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
 
-layout (binding = 3) coherent readonly buffer block1
+layout (std430, binding = 3) coherent readonly buffer ssbo_pixelHashTable
 {
-    float input_data[];
+    uint pixelHashTable[];
 };
 
-layout (binding = 5) coherent writeonly buffer block2
+layout (std430, binding = 5) coherent writeonly buffer ssbo_prefixSum
 {
-    float output_data[];
+    uint prefixSum[];
 };
 
-shared float shared_data[gl_WorkGroupSize.x * 2];
+shared uint shared_data[gl_WorkGroupSize.x * 2];
 
 uniform uint max_pixels;
 
@@ -28,8 +26,8 @@ void main(void)
     const uint steps = uint(log2(gl_WorkGroupSize.x)) + 1;
     uint step = 0;
 
-    shared_data[id * 2] = input_data[id * 2];
-    shared_data[id * 2 + 1] = input_data[id * 2 + 1];
+    shared_data[id * 2] = pixelHashTable[id * 2];
+    shared_data[id * 2 + 1] = pixelHashTable[id * 2 + 1];
 
     barrier();
 
@@ -44,6 +42,6 @@ void main(void)
         barrier();
     }
 
-    output_data[id * 2] = shared_data[id * 2];
-    output_data[id * 2 + 1] = shared_data[id * 2 + 1];
+    prefixSum[id * 2] = shared_data[id * 2];
+    prefixSum[id * 2 + 1] = shared_data[id * 2 + 1];
 }
