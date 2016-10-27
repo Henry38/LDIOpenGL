@@ -43,7 +43,7 @@ public:
 
     void setOrthogonalView(const orthoView &view);
     unsigned int getPixelPassed();
-    std::vector<pixel_frag> getPixelFrags();
+    std::vector<pixel_frag> getPixelFrag();
 
     std::vector<LDIMesh*> m_meshes;
     float m_x_resolution;
@@ -58,12 +58,13 @@ public:
 
     LDIShader m_shaderFrameBuffer;
     LDIShader m_shaderCountPixelFrag;
-    LDIShader m_shaderInitPixelHashTable;
     LDIShader m_shaderFillPixelHashTable;
-    LDIShader m_shaderInitPrefixSum;
     LDIShader m_shaderPrefixSum;
+    LDIShader m_shaderBlockSum;
+    LDIShader m_shaderAddBlockSum;
     LDIShader m_shaderInitPixelFrag;
     LDIShader m_shaderPixelFrag;
+    LDIShader m_shaderSortPixelFrag;
 
 private:
     LDIModel();
@@ -71,8 +72,9 @@ private:
     // getPixelFrag
     void getNbPixelFrag(GLuint &atomic_counter);
     void hashPixel(GLuint &ssbo_pixelHashTable, unsigned int maxPixel);
-    void prefixSum(GLuint &ssbo_prefixSum, unsigned int maxPixel);
+    void prefixSum(GLuint &ssbo_prefixSum, GLuint &ssbo_blockSum, unsigned int maxPixel);
     void pixelFrag(GLuint &ssbo_pixelFrag, unsigned int nbPixelFrag);
+    void sortPixelFrag(unsigned int nbPixelFrag);
 
     void draw();
 };

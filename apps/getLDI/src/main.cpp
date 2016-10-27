@@ -108,7 +108,7 @@ int main() {
 //    view.depth = 20;
 //    LDIModel ldiModel(vLDIMesh, view, 0.1f, 0.1f);
 
-    std::vector<LDIModel::pixel_frag> pixelFrags = ldiModel.getPixelFrags();
+    std::vector<LDIModel::pixel_frag> pixelFrags = ldiModel.getPixelFrag();
     std::cout << "info: " << pixelFrags.size() << " fragments recuperes" << std::endl;
     //int nb = ldiModel.getNbPixelFrags();
     //std::cout << nb << " pixels rendus dans le fbo" << std::endl;
