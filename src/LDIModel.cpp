@@ -31,7 +31,7 @@ LDIModel::LDIModel(const std::vector<LDIMesh*> &vLDIMeshes, const orthoView &vie
     // (stocke la matrice proj * view * model pour les shaders)
     glGenBuffers(1, &m_ubo);
     glBindBuffer(GL_UNIFORM_BUFFER, m_ubo);
-    glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
+    glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), NULL, GL_STATIC_READ);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     // Bind l'uniform buffer object a l'index 1 dans la table de liaison d'OpenGL
@@ -154,7 +154,7 @@ void LDIModel::hashPixel(GLuint &ssbo_pixelHashTable, unsigned int maxPixel)
     // (initialisation de la table de hashage)
     glGenBuffers(1, &ssbo_pixelHashTable);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_pixelHashTable);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, maxPixel*sizeof(GLuint), &data, GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, maxPixel*sizeof(GLuint), &data, GL_STATIC_READ);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
     // Bind le ssbo_pixelHashTable a l'index 3 dans la table de liaison d'OpenGL
@@ -199,7 +199,7 @@ void LDIModel::prefixSum(GLuint &ssbo_prefixSum, GLuint &ssbo_blockSum, unsigned
     // (initialisation du prefix sum)
     glGenBuffers(1, &ssbo_prefixSum);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_prefixSum);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, maxPixel*sizeof(GLuint), &prefixSum_data, GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, maxPixel*sizeof(GLuint), &prefixSum_data, GL_STATIC_READ);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
     // Bind le ssbo_prefixSum a l'index 5 dans la table de liaison d'OpenGL
@@ -211,7 +211,7 @@ void LDIModel::prefixSum(GLuint &ssbo_prefixSum, GLuint &ssbo_blockSum, unsigned
     // (initialisation du block sum)
     glGenBuffers(1, &ssbo_blockSum);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_blockSum);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, n*sizeof(GLuint), &blockSum_data, GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, n*sizeof(GLuint), &blockSum_data, GL_STATIC_READ);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
     // Bind le ssbo_blockSum a l'index 7 dans la table de liaison d'OpenGL
@@ -254,7 +254,7 @@ void LDIModel::pixelFrag(GLuint &ssbo_pixelFrag, unsigned int nbPixelFrag)
     // (initialisation du tableau des pixel_frag)
     glGenBuffers(1, &ssbo_pixelFrag);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_pixelFrag);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, nbPixelFrag*sizeof(pixel_frag), &pixelFrag_data, GL_DYNAMIC_COPY);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, nbPixelFrag*sizeof(pixel_frag), &pixelFrag_data, GL_STATIC_READ);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
     // Bind le ssbo_pixelFrag a l'index 6 dans la table de liaison d'OpenGL
