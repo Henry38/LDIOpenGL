@@ -14,13 +14,14 @@ class LDIModel {
 public:
 
 // Table de liaison OpenGL:
-//      0 = nothing
-//      1 = m_ubo
-//      2 = atomic_counter
+//      0 = m_ubo
+//      1 = ac_countFrag
+//      2 = ac_countPixel
 //      3 = ssbo pixelHashTable
 //      5 = ssbo_prefixSum
 //      6 = ssbo_blockSum
 //      7 = ssbo_pixelFrag
+//      8 = ssbo_indexFrag
 
     struct orthoView
     {
@@ -70,17 +71,18 @@ public:
     LDIShader m_shaderBlockSum;
     LDIShader m_shaderAddBlockSum;
     LDIShader m_shaderPixelFrag;
+    LDIShader m_shaderFillIndexFrag;
     LDIShader m_shaderSortPixelFrag;
 
 private:
     LDIModel();
 
-    // getPixelFrag
-    void getNbPixelFrag(GLuint &atomic_counter);
-    void hashPixel(GLuint &ssbo_pixelHashTable, unsigned int maxPixel);
+    void getNbPixelFrag(GLuint &ac_countFrag);
+    void hashPixel(GLuint &ac_countPixel, GLuint &ssbo_pixelHashTable, unsigned int maxPixel);
     void prefixSum(GLuint &ssbo_prefixSum, GLuint &ssbo_blockSum, unsigned int maxPixel);
     void pixelFrag(GLuint &ssbo_pixelFrag, unsigned int nbPixelFrag);
-    void sortPixelFrag(unsigned int nbPixelFrag);
+    void indexFrag(GLuint &ssbo_indexFrag, unsigned int maxPixel, unsigned int nbPixel);
+    void sortPixelFrag(unsigned int nbPixel);
 
     void draw();
 };

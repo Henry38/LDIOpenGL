@@ -8,13 +8,31 @@ struct pixel_frag {
     float m_z;
 };
 
-layout (std430, binding = 6) buffer ssbo_pixelFrag
+layout (std430, binding = 7) buffer ssbo_pixelFrag
 {
-    uint pixelFrag[];
+    pixel_frag pixelFrag[];
 };
 
-uniform uint max_pixelFrag;
+layout (std430, binding = 8) buffer ssbo_indexFrag
+{
+    uint indexFrag[];
+};
+
+uniform uint nb_pixel;
 
 void main(void)
 {
+    uint wid = gl_WorkGroupID.x;
+
+    uint prev = (wid > 0 ? indexFrag[wid - 1] : 0);
+    uint next = indexFrag[wid];
+//    uint prev = 0;
+//    uint next = indexFrag[wid];
+//    if (wid > 0) {
+//        prev = indexFrag[wid - 1];
+//    }
+
+    for (uint i = prev; i < next; ++i) {
+        // sort pixelFrag
+    }
 }

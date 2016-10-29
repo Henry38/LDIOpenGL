@@ -35,6 +35,7 @@ set(SHADER_FILES
     shaders/blockSum.glsl
     shaders/addBlockSum.glsl
     shaders/fillPixelFrag.frag
+    shaders/fillIndexFrag.glsl
     shaders/sortPixelFrag.glsl
 )
 
