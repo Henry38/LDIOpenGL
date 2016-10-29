@@ -35,7 +35,6 @@ set(SHADER_FILES
     shaders/blockSum.glsl
     shaders/addBlockSum.glsl
     shaders/trivial_prefixSum.glsl
-    shaders/initPixelFrag.glsl
     shaders/fillPixelFrag.frag
     shaders/sortPixelFrag.glsl
 )

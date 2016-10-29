@@ -12,17 +12,13 @@ layout (binding = 7) buffer ssbo_blockSum
     uint blockSum[];
 };
 
-uniform uint max_pixels;
-
 void main(void)
 {
-//    uint id = gl_GlobalInvocationID.x;
-//    uint wid = gl_WorkGroupID.x;
+    uint id = gl_GlobalInvocationID.x;
+    uint wid = gl_WorkGroupID.x;
 
-//    if (id * 2 < max_pixels) {
-//        prefixSum[id * 2] += blockSum[wid];
-//    }
-//    if (id * 2 + 1 < max_pixels) {
-//        prefixSum[id * 2 + 1] += blockSum[wid];
-//    }
+    if (wid > 0) {
+        prefixSum[id * 2] += blockSum[wid - 1];
+        prefixSum[id * 2 + 1] += blockSum[wid - 1];
+    }
 }

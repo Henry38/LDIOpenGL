@@ -33,6 +33,12 @@ public:
 
     struct pixel_frag
     {
+        pixel_frag() {
+            this->m_i = 0;
+            this->m_j = 0;
+            this->m_z = 0.0f;
+        }
+
         unsigned int m_i;
         unsigned int m_j;
         float m_z;
@@ -62,7 +68,6 @@ public:
     LDIShader m_shaderPrefixSum;
     LDIShader m_shaderBlockSum;
     LDIShader m_shaderAddBlockSum;
-    LDIShader m_shaderInitPixelFrag;
     LDIShader m_shaderPixelFrag;
     LDIShader m_shaderSortPixelFrag;
 
