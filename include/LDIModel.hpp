@@ -13,13 +13,14 @@
 class LDIModel {
 public:
 
-//    enum LDI_ENUMS
-//    {
-//        LDI_BINDING_ATOMIC_COUNTERS,
-//        LDI_BINDING_PREFIX_SUMS,
-//        LDI_BINDING_HASHTABLE,
-//        LDI_BINDING_PIXELFRAG,
-//    };
+// Table de liaison OpenGL:
+//      0 = nothing
+//      1 = m_ubo
+//      2 = atomic_counter
+//      3 = ssbo pixelHashTable
+//      5 = ssbo_prefixSum
+//      6 = ssbo_blockSum
+//      7 = ssbo_pixelFrag
 
     struct orthoView
     {

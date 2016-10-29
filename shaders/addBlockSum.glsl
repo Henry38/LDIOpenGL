@@ -7,7 +7,7 @@ layout (binding = 5) buffer ssbo_prefixSum
     uint prefixSum[];
 };
 
-layout (binding = 7) buffer ssbo_blockSum
+layout (binding = 6) buffer ssbo_blockSum
 {
     uint blockSum[];
 };

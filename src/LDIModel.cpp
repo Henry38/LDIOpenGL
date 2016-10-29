@@ -215,7 +215,7 @@ void LDIModel::prefixSum(GLuint &ssbo_prefixSum, GLuint &ssbo_blockSum, unsigned
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
     // Bind le ssbo_blockSum a l'index 7 dans la table de liaison d'OpenGL
-    GLuint bind_ssbo_blockSum_point_index = 7;
+    GLuint bind_ssbo_blockSum_point_index = 6;
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bind_ssbo_blockSum_point_index, ssbo_blockSum);
 
     ///////////////////////////////////////////////////////////////////////////
@@ -258,8 +258,8 @@ void LDIModel::pixelFrag(GLuint &ssbo_pixelFrag, unsigned int nbPixelFrag)
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
     // Bind le ssbo_pixelFrag a l'index 6 dans la table de liaison d'OpenGL
-    GLuint bind_ssbo3_point_index = 6;
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bind_ssbo3_point_index, ssbo_pixelFrag);
+    GLuint bind_ssbo_point_index = 7;
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bind_ssbo_point_index, ssbo_pixelFrag);
 
     ///////////////////////////////////////////////////////////////////////////
     // Remplissage du shader storage buffer object
@@ -287,14 +287,6 @@ void LDIModel::sortPixelFrag(unsigned int nbPixelFrag)
 }
 
 // Warning, change le viewport d'OpenGL
-// Table de liaison OpenGL:
-//      0 = nothing
-//      1 = m_ubo
-//      2 = atomic_counter
-//      3 = ssbo pixelHashTable
-//      5 = ssbo_prefixSum
-//      6 = ssbo_pixelFrag
-//      7 = ssbo_blockSum
 std::vector<pixel_frag> LDIModel::getPixelFrag()
 {
     GLint old_program;

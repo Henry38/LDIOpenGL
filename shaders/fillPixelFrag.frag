@@ -11,7 +11,7 @@ layout (std430, binding = 5) buffer ssbo_prefixSum
     uint prefixSum[];
 };
 
-layout (std430, binding = 6) buffer ssbo_pixelFrag
+layout (std430, binding = 7) buffer ssbo_pixelFrag
 {
     pixel_frag pixelFrag[];
 };

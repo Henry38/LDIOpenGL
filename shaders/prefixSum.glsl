@@ -12,7 +12,7 @@ layout (std430, binding = 5) coherent writeonly buffer ssbo_prefixSum
     uint prefixSum[];
 };
 
-layout (binding = 7) coherent writeonly buffer ssbo_blockSum
+layout (binding = 6) coherent writeonly buffer ssbo_blockSum
 {
     uint blockSum[];
 };
