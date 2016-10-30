@@ -97,21 +97,20 @@ void LDIModel::setOrthogonalView(const LDIModel::orthoView &view)
 
 unsigned int LDIModel::getPixelPassed() {
     GLuint program = m_shaderFrameBuffer.getProgramID();
-    glUseProgram(program);
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     GLuint nbPixelsQuery;
-    int nbPixels = 0;
+    int nbPixel = 0;
 
+    glUseProgram(program);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glGenQueries(1, &nbPixelsQuery);
     glBeginQuery(GL_SAMPLES_PASSED, nbPixelsQuery);
     draw();
     glEndQuery(GL_SAMPLES_PASSED);
-    glGetQueryObjectiv(nbPixelsQuery, GL_QUERY_RESULT, &nbPixels);
+    glGetQueryObjectiv(nbPixelsQuery, GL_QUERY_RESULT, &nbPixel);
     glDeleteQueries(1, &nbPixelsQuery);
 
-    return nbPixels;
+    return nbPixel;
 }
 
 void LDIModel::getNbPixelFrag(GLuint &ac_countFrag)
@@ -185,22 +184,19 @@ void LDIModel::hashPixel(GLuint &ac_countPixel, GLuint &ssbo_pixelHashTable, uns
     draw();
 }
 
-void LDIModel::prefixSum(GLuint &ssbo_prefixSum, GLuint &ssbo_blockSum, unsigned int maxPixel)
+void LDIModel::prefixSum(GLuint &ssbo_prefixSum, GLuint &ssbo_blockSum, unsigned int maxPixel, unsigned int nbBlock)
 {
     GLuint programPrefixSum = m_shaderPrefixSum.getProgramID();
     GLuint programBlockSum = m_shaderBlockSum.getProgramID();
     GLuint programAddBlockSum = m_shaderAddBlockSum.getProgramID();
-
-    unsigned int n = std::ceil( maxPixel/2048.0f );
-    maxPixel = n * 2048;
 
     GLuint prefixSum_data[maxPixel];
     for (unsigned int i = 0; i < maxPixel; ++i) {
         prefixSum_data[i] = 0;
     }
 
-    GLuint blockSum_data[n];
-    for (unsigned int i = 0; i < n; ++i) {
+    GLuint blockSum_data[nbBlock];
+    for (unsigned int i = 0; i < nbBlock; ++i) {
         blockSum_data[i] = 0;
     }
 
@@ -222,7 +218,7 @@ void LDIModel::prefixSum(GLuint &ssbo_prefixSum, GLuint &ssbo_blockSum, unsigned
     // (initialisation du block sum)
     glGenBuffers(1, &ssbo_blockSum);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_blockSum);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, n*sizeof(GLuint), &blockSum_data, GL_STATIC_READ);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, nbBlock*sizeof(GLuint), &blockSum_data, GL_STATIC_READ);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
     // Bind le ssbo_blockSum a l'index 6 dans la table de liaison d'OpenGL
@@ -234,14 +230,14 @@ void LDIModel::prefixSum(GLuint &ssbo_prefixSum, GLuint &ssbo_blockSum, unsigned
     // (calcul du prefix sum)
     glUseProgram(programPrefixSum);
 
-    glDispatchCompute(n, 1, 1);
+    glDispatchCompute(nbBlock, 1, 1);
 
     ///////////////////////////////////////////////////////////////////////////
     // Remplissage du shader storage buffer object
     // (calcul du block sum)
     glUseProgram(programBlockSum);
     GLuint maxBlockLoc = glGetUniformLocation(programBlockSum, "max_block");
-    glUniform1ui(maxBlockLoc, n);
+    glUniform1ui(maxBlockLoc, nbBlock);
 
     glDispatchCompute(1, 1, 1);
 
@@ -250,7 +246,7 @@ void LDIModel::prefixSum(GLuint &ssbo_prefixSum, GLuint &ssbo_blockSum, unsigned
     // (calcul du prefix sum final)
     glUseProgram(programAddBlockSum);
 
-    glDispatchCompute(n, 1, 1);
+    glDispatchCompute(nbBlock, 1, 1);
 }
 
 void LDIModel::pixelFrag(GLuint &ssbo_pixelFrag, unsigned int nbPixelFrag)
@@ -323,7 +319,10 @@ void LDIModel::sortPixelFrag(unsigned int nbPixel)
 
     /// Sort pixelFrag
     ///////////////////////////////////////////////////////////////////////////
+    // Tri du shader storage buffer object
+    // (tri les fragments par ordre croissant sur les z)
     glUseProgram(programSortPixelFrag);
+
     GLuint nbPixelLoc = glGetUniformLocation(programSortPixelFrag, "nb_pixel");
     glUniform1ui(nbPixelLoc, nbPixel);
 
@@ -341,6 +340,8 @@ std::vector<pixel_frag> LDIModel::getPixelFrag()
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
 
     unsigned int maxPixel = m_screenWidth * m_screenHeight;
+    unsigned int nbBlock = std::ceil( maxPixel/2048.0f );
+    maxPixel = nbBlock * 2048;
 
     ///////////////////////////////////////////////////////////////////////////
     /// 1 : perform a full fragment count
@@ -375,7 +376,7 @@ std::vector<pixel_frag> LDIModel::getPixelFrag()
         /// 1.2 : perform a prefixSum on the hash table
         GLuint ssbo_prefixSum;
         GLuint ssbo_blockSum;
-        prefixSum(ssbo_prefixSum, ssbo_blockSum, maxPixel);
+        prefixSum(ssbo_prefixSum, ssbo_blockSum, maxPixel, nbBlock);
 
         ///////////////////////////////////////////////////////////////////////////
         /// 1.3 : fill each pixel with fragments
@@ -397,11 +398,11 @@ std::vector<pixel_frag> LDIModel::getPixelFrag()
         std::memcpy(vPixelFrag.data(), ssbo_pixelFrag_ptr, nbPixelFrag*sizeof(pixel_frag));
         glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
-        // // debug
-        // for (unsigned int i = 0; i < vPixelFrag.size(); ++i) {
-        //     pixel_frag &p = vPixelFrag[i];
-        //     std::cout << p.m_i << ", " << p.m_j << " : " << p.m_z << std::endl;
-        // }
+        //// debug
+        //for (unsigned int i = 0; i < vPixelFrag.size(); ++i) {
+        //    pixel_frag &p = vPixelFrag[i];
+        //    std::cout << p.m_i << ", " << p.m_j << " : " << p.m_z << std::endl;
+        //}
 
         glDeleteBuffers(1, &ac_countPixel);
         glDeleteBuffers(1, &ssbo_pixelHashTable);

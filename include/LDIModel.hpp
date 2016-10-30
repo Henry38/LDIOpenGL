@@ -79,7 +79,7 @@ private:
 
     void getNbPixelFrag(GLuint &ac_countFrag);
     void hashPixel(GLuint &ac_countPixel, GLuint &ssbo_pixelHashTable, unsigned int maxPixel);
-    void prefixSum(GLuint &ssbo_prefixSum, GLuint &ssbo_blockSum, unsigned int maxPixel);
+    void prefixSum(GLuint &ssbo_prefixSum, GLuint &ssbo_blockSum, unsigned int maxPixel, unsigned int nbBlock);
     void pixelFrag(GLuint &ssbo_pixelFrag, unsigned int nbPixelFrag);
     void indexFrag(GLuint &ssbo_indexFrag, unsigned int maxPixel, unsigned int nbPixel);
     void sortPixelFrag(unsigned int nbPixel);
