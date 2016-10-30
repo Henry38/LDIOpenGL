@@ -25,7 +25,6 @@ LDIModel::LDIModel(const std::vector<LDIMesh*> &vLDIMeshes, const orthoView &vie
 {
     m_screenWidth = std::ceil(view.width / m_x_resolution);
     m_screenHeight = std::ceil(view.height / m_y_resolution);
-    std::cout << m_screenWidth << ", " << m_screenHeight << std::endl;
 
     ///////////////////////////////////////////////////////////////////////////
     // Creation d'un uniform buffer object
@@ -128,8 +127,8 @@ void LDIModel::getNbPixelFrag(GLuint &ac_countFrag)
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 
     // Bind l'ac a l'index 1 dans la table de liaison d'OpenGL
-    GLuint binding_ac_point_index = 1;
-    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, binding_ac_point_index, ac_countFrag);
+    GLuint binding_ac_countFrag_point_index = 1;
+    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, binding_ac_countFrag_point_index, ac_countFrag);
 
     ///////////////////////////////////////////////////////////////////////////
     // Incrementatation de l'atomic counter
@@ -159,8 +158,8 @@ void LDIModel::hashPixel(GLuint &ac_countPixel, GLuint &ssbo_pixelHashTable, uns
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 
     // Bind l'ac a l'index 2 dans la table de liaison d'OpenGL
-    GLuint binding_ac_point_index = 2;
-    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, binding_ac_point_index, ac_countPixel);
+    GLuint binding_ac_countPixel_point_index = 2;
+    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, binding_ac_countPixel_point_index, ac_countPixel);
 
     ///////////////////////////////////////////////////////////////////////////
     // Creation d'un shader storage buffer object
@@ -226,7 +225,7 @@ void LDIModel::prefixSum(GLuint &ssbo_prefixSum, GLuint &ssbo_blockSum, unsigned
     glBufferData(GL_SHADER_STORAGE_BUFFER, n*sizeof(GLuint), &blockSum_data, GL_STATIC_READ);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    // Bind le ssbo_blockSum a l'index 7 dans la table de liaison d'OpenGL
+    // Bind le ssbo_blockSum a l'index 6 dans la table de liaison d'OpenGL
     GLuint bind_ssbo_blockSum_point_index = 6;
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bind_ssbo_blockSum_point_index, ssbo_blockSum);
 
@@ -344,6 +343,7 @@ std::vector<pixel_frag> LDIModel::getPixelFrag()
     unsigned int maxPixel = m_screenWidth * m_screenHeight;
 
     ///////////////////////////////////////////////////////////////////////////
+    /// 1 : perform a full fragment count
     GLuint ac_countFrag;
     getNbPixelFrag(ac_countFrag);
 
@@ -355,10 +355,11 @@ std::vector<pixel_frag> LDIModel::getPixelFrag()
     glUnmapBuffer(GL_ATOMIC_COUNTER_BUFFER);
 
     std::vector<pixel_frag> vPixelFrag(nbPixelFrag);
-    std::cout << "OpenGL: " << nbPixelFrag << " pixels rasterises" << std::endl;
+    //std::cout << "OpenGL: " << nbPixelFrag << " pixels rasterises" << std::endl;
 
     if (nbPixelFrag > 0) {
         ///////////////////////////////////////////////////////////////////////////
+        /// 1.1 : perform a fragment count on each pixel
         GLuint ac_countPixel;
         GLuint ssbo_pixelHashTable;
         hashPixel(ac_countPixel, ssbo_pixelHashTable, maxPixel);
@@ -371,31 +372,23 @@ std::vector<pixel_frag> LDIModel::getPixelFrag()
         glUnmapBuffer(GL_ATOMIC_COUNTER_BUFFER);
 
         ///////////////////////////////////////////////////////////////////////////
+        /// 1.2 : perform a prefixSum on the hash table
         GLuint ssbo_prefixSum;
         GLuint ssbo_blockSum;
         prefixSum(ssbo_prefixSum, ssbo_blockSum, maxPixel);
 
         ///////////////////////////////////////////////////////////////////////////
+        /// 1.3 : fill each pixel with fragments
         GLuint ssbo_pixelFrag;
         pixelFrag(ssbo_pixelFrag, nbPixelFrag);
 
         ///////////////////////////////////////////////////////////////////////////
+        /// 1.4 : indexing each pixel
         GLuint ssbo_indexFrag;
         indexFrag(ssbo_indexFrag, maxPixel, nbPixel);
 
-//        // fetch ssbo_indexFrag
-//        std::vector<unsigned int> vIndexFrag(nbPixel);
-//        glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_indexFrag);
-//        GLuint* ssbo_indexFrag_ptr = (GLuint*) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-//        std::memcpy(vIndexFrag.data(), ssbo_indexFrag_ptr, nbPixel*sizeof(GLuint));
-//        glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-
-//        std::cout << "indexFrag" << std::endl;
-//        for (unsigned int i = 0; i < vIndexFrag.size(); ++i) {
-//            std::cout << i << ": " << vIndexFrag[i] << std::endl;
-//        }
-
         ///////////////////////////////////////////////////////////////////////////
+        /// 1.5 : sort fragments according to their depth
         sortPixelFrag(nbPixel);
 
         // fetch ssbo_pixelFrag
@@ -404,11 +397,11 @@ std::vector<pixel_frag> LDIModel::getPixelFrag()
         std::memcpy(vPixelFrag.data(), ssbo_pixelFrag_ptr, nbPixelFrag*sizeof(pixel_frag));
         glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
-        // debug
-        for (unsigned int i = 0; i < vPixelFrag.size(); ++i) {
-            pixel_frag &p = vPixelFrag[i];
-            std::cout << p.m_i << ", " << p.m_j << " : " << p.m_z << std::endl;
-        }
+        // // debug
+        // for (unsigned int i = 0; i < vPixelFrag.size(); ++i) {
+        //     pixel_frag &p = vPixelFrag[i];
+        //     std::cout << p.m_i << ", " << p.m_j << " : " << p.m_z << std::endl;
+        // }
 
         glDeleteBuffers(1, &ac_countPixel);
         glDeleteBuffers(1, &ssbo_pixelHashTable);
