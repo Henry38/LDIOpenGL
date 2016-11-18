@@ -116,13 +116,14 @@ unsigned int LDIModel::getPixelPassed() {
 void LDIModel::getNbPixelFrag(GLuint &ac_countFrag)
 {
     GLuint programCountPixelFrag = m_shaderCountPixelFrag.getProgramID();
+    GLuint reset = 0;
 
     ///////////////////////////////////////////////////////////////////////////
     // Creation d'un atomic counter
     // (initialisation du compteur)
     glGenBuffers(1, &ac_countFrag);
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, ac_countFrag);
-    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), 0, GL_STREAM_READ);
+    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &reset, GL_STREAM_READ);
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 
     // Bind l'ac a l'index 1 dans la table de liaison d'OpenGL
