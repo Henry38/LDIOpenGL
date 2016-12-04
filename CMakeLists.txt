@@ -38,6 +38,9 @@ set(SHADER_FILES
     shaders/sortPixelFrag.glsl
 )
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+add_definitions(-DCMAKE_CWD="${CMAKE_CURRENT_SOURCE_DIR}")
+
 #================= Libraries Dependancies =================#
 find_package(OpenGL REQUIRED)
 if (OPENGL_FOUND)
@@ -51,22 +54,24 @@ if (GLEW_FOUND)
     link_libraries(${GLEW_LIBRARIES})
 endif()
 
-#========= Linking with local Assimp =========#
-#include_directories(${CMAKE_CURRENT_SOURCE_DIR}/extlib/assimp/include)
-#find_library(ASSIMP_LIBRARY assimp ${CMAKE_CURRENT_SOURCE_DIR}/extlib/assimp/lib)
-#link_libraries(${ASSIMP_LIBRARY})
-
+#=========== Adding subdirectories ===========#
 add_subdirectory(apps/getLDI)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-add_definitions(-DCMAKE_CWD="${CMAKE_CURRENT_SOURCE_DIR}")
+#========== Creation of the library ==========#
 add_library(${PROJECT_NAME} SHARED ${HEADER_FILES} ${SOURCE_FILES} ${SHADER_FILES})
+
+#========= Linking with local Assimp =========#
+set(ASSIMP_PATH ${CMAKE_CURRENT_SOURCE_DIR}/extlib/assimp)
 
 find_library(ASSIMP_LIBRARY
 	NAME assimp
 	NO_DEFAULT_PATH
-	PATHS ${CMAKE_CURRENT_SOURCE_DIR}/extlib/assimp/lib
+        PATHS ${ASSIMP_PATH}/lib
 )
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/extlib/assimp/include)
-target_link_libraries(${PROJECT_NAME} PUBLIC ${ASSIMP_LIBRARY})
+
+if(ASSIMP_LIBRARY-NOTFOUND)
+    message(FATAL_ERROR "Assimp library not found !")
+else()
+    target_include_directories(${PROJECT_NAME} PUBLIC ${ASSIMP_PATH}/include)
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${ASSIMP_LIBRARY})
+endif()
