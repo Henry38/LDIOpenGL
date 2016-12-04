@@ -64,6 +64,10 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_definitions(-DCMAKE_CWD="${CMAKE_CURRENT_SOURCE_DIR}")
 add_library(${PROJECT_NAME} SHARED ${HEADER_FILES} ${SOURCE_FILES} ${SHADER_FILES})
 
-find_library(ASSIMP_LIBRARY assimp ${CMAKE_CURRENT_SOURCE_DIR}/extlib/assimp/lib)
+find_library(ASSIMP_LIBRARY
+	NAME assimp
+	NO_DEFAULT_PATH
+	PATHS ${CMAKE_CURRENT_SOURCE_DIR}/extlib/assimp/lib
+)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/extlib/assimp/include)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ASSIMP_LIBRARY})
