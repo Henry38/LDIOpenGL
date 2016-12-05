@@ -86,27 +86,29 @@ int main() {
     ///////////////////////////////////////////////////////////////////////////
     // Creation des meshes (vao, vbo, ...)
     std::vector<LDIMesh*> vLDIMesh;
-    //std::string objFilename1 = CWD + std::string("/models/dragon_low.obj");
-    std::string objFilename1 = CWD + std::string("/models/cube.obj");
+    std::string objFilename1 = CWD + std::string("/models/dragon_low.obj");
+    //std::string objFilename1 = CWD + std::string("/models/cube.obj");
     LDIMesh *ldiMesh1 = LDIMesh::fromObj(objFilename1);
     vLDIMesh.push_back(ldiMesh1);
 
     // Creation du LDIModel
     LDIModel::orthoView view;
-    view.camCenter = glm::vec3(0,0,2);
+    // Cube
+    // view.camCenter = glm::vec3(0,0,2);
+    // view.normalDir = glm::vec3(0,0,-1);
+    // view.upDir = glm::vec3(0,1,0);
+    // view.width = 2;
+    // view.height = 2;
+    // view.depth = 4;
+    // LDIModel ldiModel(vLDIMesh, view, 1.0f, 1.0f);
+    // Dragon
+    view.camCenter = glm::vec3(0,0,6);
     view.normalDir = glm::vec3(0,0,-1);
     view.upDir = glm::vec3(0,1,0);
-    view.width = 2;
-    view.height = 2;
-    view.depth = 4;
-    LDIModel ldiModel(vLDIMesh, view, 1.0f, 1.0f);
-//    view.camCenter = glm::vec3(0,0,6);
-//    view.normalDir = glm::vec3(0,0,-1);
-//    view.upDir = glm::vec3(0,1,0);
-//    view.width = 20;
-//    view.height = 20;
-//    view.depth = 20;
-//    LDIModel ldiModel(vLDIMesh, view, 0.1f, 0.1f);
+    view.width = 20;
+    view.height = 20;
+    view.depth = 20;
+    LDIModel ldiModel(vLDIMesh, view, 0.1f, 0.1f);
 
     std::vector<LDIModel::pixel_frag> pixelFrags = ldiModel.getPixelFrag();
     std::cout << "info: " << pixelFrags.size() << " fragments recuperes" << std::endl;
@@ -293,23 +295,25 @@ void sendVariablesToShader(GLuint program)
 {
     glUseProgram(program);
 
-    glm::vec3 camCenter(0,0,6);
+    glm::vec3 camCenter(0,0,10);
     glm::vec3 lookAt(0,0,0);
     glm::vec3 upDir(0,1,0);
     float depth = 20.0f;
 
-    //glm::mat4 projMat = glm::perspective(90.0f, (float)width / (float)height, 0.1f, 40.0f);
-    glm::mat4 projMat = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.0f, depth);
+    glm::mat4 projMat_persp = glm::perspective(90.0f, (float)screenWidth / (float)screenHeight, 0.1f, 40.0f);
+    glm::mat4 projMat_ortho = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.0f, depth);
     glm::mat4 viewMat = glm::lookAt(camCenter, lookAt, upDir);
     glm::mat4 modelMat = glm::mat4();
     glm::vec3 light = glm::vec3(0,0,-1);
 
-    GLuint projLoc = glGetUniformLocation(program, "projMat");
+    GLuint projLoc = glGetUniformLocation(program, "projMat_persp");
+    GLuint projLoc_ortho = glGetUniformLocation(program, "projMat_ortho");
     GLuint viewLoc = glGetUniformLocation(program, "viewMat");
     GLuint modelLoc = glGetUniformLocation(program, "modelMat");
     GLuint lightLoc = glGetUniformLocation(program, "light");
 
-    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projMat));
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projMat_persp));
+    glUniformMatrix4fv(projLoc_ortho, 1, GL_FALSE, glm::value_ptr(projMat_ortho));
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMat));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMat));
     glUniform3fv(lightLoc, 1, glm::value_ptr(light));
