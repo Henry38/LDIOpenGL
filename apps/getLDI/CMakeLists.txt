@@ -14,6 +14,12 @@ if (GLFW_FOUND)
     link_libraries(${GLFW_LIBRARY})
 endif()
 
+find_package(GLUT REQUIRED)
+if (GLUT_FOUND)
+    include_directories(${GLUT_INCLUDE_DIR})
+    link_libraries(${GLUT_LIBRARIES})
+endif()
+
 find_package(GLM REQUIRED)
 if(GLM_FOUND)
     include_directories(${GLM_INCLUDE_DIRS})

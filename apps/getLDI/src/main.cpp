@@ -10,7 +10,10 @@
 #include <GL/gl.h>
 
 // GLFW
-#include <GLFW/glfw3.h>
+//#include <GLFW/glfw3.h>
+
+// Glut
+#include <GL/freeglut.h>
 
 // GLM
 #define GLM_FORCE_RADIANS
@@ -29,10 +32,10 @@
     #define CWD "Error"
 #endif
 
-const int framerate = 20;
+//const int framerate = 20;
 const GLuint screenWidth = 640;
 const GLuint screenHeight = 480;
-GLFWwindow* window;
+//GLFWwindow* window;
 
 GLuint vaoQuad, quad, quadTex;
 void initVaoQuad();
@@ -48,8 +51,182 @@ void destroyFrameBuffer();
 void sendVariablesToShader(GLuint program);
 void attachTextureToShader(GLuint program);
 
-int main() {
+std::vector<LDIMesh*> vLDIMesh;
+GLuint shaderProg;
+GLuint shaderFrameBufferProg;
 
+LDIShader *shader;
+LDIShader *shaderFrameBuffer;
+
+void init() {
+    ///////////////////////////////////////////////////////////////////////////
+    // Magic !
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK) {
+        std::cerr << "Failed to initialize GLEW" << std::endl;
+        throw std::exception();
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Initialisation de la machine a etat OpenGL
+    glClearColor(0.0, 1.0, 0.0, 0.0);
+    glEnable(GL_DEPTH_TEST);
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Creation des meshes (vao, vbo, ...)
+    std::string objFilename1 = CWD + std::string("/models/dragon_low.obj");
+    //std::string objFilename1 = CWD + std::string("/models/cube.obj");
+    LDIMesh *ldiMesh1 = LDIMesh::fromObj(objFilename1);
+    vLDIMesh.push_back(ldiMesh1);
+
+    // Creation du LDIModel
+    LDIModel::orthoView view;
+    // Cube
+    // view.camCenter = glm::vec3(0,0,2);
+    // view.normalDir = glm::vec3(0,0,-1);
+    // view.upDir = glm::vec3(0,1,0);
+    // view.width = 2;
+    // view.height = 2;
+    // view.depth = 4;
+    // LDIModel ldiModel(vLDIMesh, view, 1.0f, 1.0f);
+    // Dragon
+    view.camCenter = glm::vec3(0,0,6);
+    view.normalDir = glm::vec3(0,0,-1);
+    view.upDir = glm::vec3(0,1,0);
+    view.width = 20;
+    view.height = 20;
+    view.depth = 20;
+    LDIModel ldiModel(vLDIMesh, view, 0.1f, 0.1f);
+
+    std::vector<LDIModel::pixel_frag> pixelFrags = ldiModel.getPixelFrag();
+    std::cout << "info: " << pixelFrags.size() << " fragments recuperes" << std::endl;
+    //int nb = ldiModel.getNbPixelFrags();
+    //std::cout << nb << " pixels rendus dans le fbo" << std::endl;
+    //glViewport(0, 0, width, height);
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Creation du vaoQuad pour afficher le frameBuffer
+    initVaoQuad();
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Creation d'un frameBuffer et de ses textures
+    initFrameBuffer(screenWidth, screenHeight);
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Creation des shaders
+    std::vector<std::string> shaderPath;
+    shaderPath.push_back("basic.vert");
+    shaderPath.push_back("basic.frag");
+    shader = new LDIShader(shaderPath, LDI_SHADER_VF);
+
+    std::vector<std::string> shaderPathFrameBuffer;
+    shaderPathFrameBuffer.push_back("fboPass.vert");
+    shaderPathFrameBuffer.push_back("fboPass.frag");
+    shaderFrameBuffer = new LDIShader(shaderPathFrameBuffer, LDI_SHADER_VF);
+
+    shaderProg = shader->getProgramID();
+    shaderFrameBufferProg = shaderFrameBuffer->getProgramID();
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Passer les matrices au premier shader ici
+    sendVariablesToShader(shaderFrameBufferProg);
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Passer les textures au second shader ici
+    attachTextureToShader(shaderProg);
+}
+
+void afficher() {
+    ///////////////////////////////////////////////////////////////////////////
+    // Dessiner dans le framebuffer (premiere passe)
+    glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glUseProgram(shaderFrameBufferProg);
+
+    for (unsigned int i = 0; i < vLDIMesh.size(); ++i) {
+        LDIMesh *mesh = vLDIMesh[i];
+        mesh->draw();
+    }
+
+    // Dessiner dans le framebuffer d'OpenGL (seconde passe)
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glUseProgram(shaderProg);
+
+    glBindVertexArray(vaoQuad);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Swap le front et le back buffer
+    glutSwapBuffers();
+    std::cout << "display" << std::endl;
+}
+
+void refenetrer(int width, int height) {
+    glViewport(0, 0, (GLsizei) width, (GLsizei) height);
+}
+
+void clavier(unsigned char touche, int x, int y)
+{
+    switch (touche)
+    {
+        case 27:    // Escape
+            //glutLeaveMainLoop();
+            glutPostRedisplay();
+            break;
+    }
+}
+
+void gerer_souris(int bouton, int etat, int x, int y) {
+
+}
+
+void gerer_souris_mouvement(int x, int y) {
+
+}
+
+void terminate() {
+    for (unsigned int i = 0; i < vLDIMesh.size(); ++i) {
+        LDIMesh::destroy(vLDIMesh[i]);
+    }
+    delete shader;
+    delete shaderFrameBuffer;
+    destroyFrameBuffer();
+    destroyVaoQuad();
+    glUseProgram(0);
+}
+
+int main(int argvc, char **argv)
+{
+    try {
+        glutInit(&argvc, argv);
+        glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);    /* affichage couleur */
+        glutInitWindowSize(screenWidth, screenHeight);  /* taille initiale fenetre graphique */
+        glutInitWindowPosition(200,200);                /* position initiale */
+        glutCreateWindow(argv[0]);                      /* creation de la fenetre graphique et du contexte OpenGL */
+
+        init();
+
+        glutDisplayFunc(afficher);                      /* fonction d’affichage */
+        glutReshapeFunc(refenetrer);                    /* fonction de refenetrage */
+        glutKeyboardFunc(clavier);                      /* gestion du clavier */
+        glutMouseFunc(gerer_souris);                    /* fonction souris  */
+        glutMotionFunc(gerer_souris_mouvement);         /* deplacement de la souris */
+        glutMainLoop();                                 /* lancement de la boucle principale */
+
+        terminate();
+    } catch (const std::exception &) {
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+
+/*
     if (!glfwInit()) {
         std::cerr << "Failed to init glfw context" << std::endl;
         return EXIT_FAILURE;
@@ -196,6 +373,7 @@ int main() {
     glfwTerminate();
 
     return EXIT_SUCCESS;
+*/
 }
 
 void initVaoQuad()
