@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <thread>
+#include <math.h>
 
 // OpenGL
 #include <GL/glew.h>
@@ -58,9 +59,13 @@ GLuint shaderFrameBufferProg;
 LDIShader *shader;
 LDIShader *shaderFrameBuffer;
 
+glm::mat4 viewMat;
+int prev_x = -1;
+int prev_y = -1;
+
 void init() {
     ///////////////////////////////////////////////////////////////////////////
-    // Magic !
+    // Fetch modern OpenGL API at runtime
     glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK) {
         std::cerr << "Failed to initialize GLEW" << std::endl;
@@ -100,9 +105,6 @@ void init() {
 
     std::vector<LDIModel::pixel_frag> pixelFrags = ldiModel.getPixelFrag();
     std::cout << "info: " << pixelFrags.size() << " fragments recuperes" << std::endl;
-    //int nb = ldiModel.getNbPixelFrags();
-    //std::cout << nb << " pixels rendus dans le fbo" << std::endl;
-    //glViewport(0, 0, width, height);
 
     ///////////////////////////////////////////////////////////////////////////
     // Creation du vaoQuad pour afficher le frameBuffer
@@ -126,6 +128,11 @@ void init() {
 
     shaderProg = shader->getProgramID();
     shaderFrameBufferProg = shaderFrameBuffer->getProgramID();
+
+    glm::vec3 camCenter(0,0,10);
+    glm::vec3 lookAt(0,0,0);
+    glm::vec3 upDir(0,1,0);
+    viewMat = glm::lookAt(camCenter, lookAt, upDir);
 
     ///////////////////////////////////////////////////////////////////////////
     // Passer les matrices au premier shader ici
@@ -164,7 +171,6 @@ void afficher() {
     ///////////////////////////////////////////////////////////////////////////
     // Swap le front et le back buffer
     glutSwapBuffers();
-    std::cout << "display" << std::endl;
 }
 
 void refenetrer(int width, int height) {
@@ -176,18 +182,39 @@ void clavier(unsigned char touche, int x, int y)
     switch (touche)
     {
         case 27:    // Escape
-            //glutLeaveMainLoop();
-            glutPostRedisplay();
+            glutLeaveMainLoop();
+            //glutPostRedisplay();
             break;
     }
 }
 
-void gerer_souris(int bouton, int etat, int x, int y) {
-
+void gerer_souris(int button, int state, int x, int y) {
+    switch (button) {
+      case GLUT_LEFT_BUTTON:
+         if (state == GLUT_DOWN)
+            prev_x = x;
+            prev_y = y;
+         break;
+      default:
+         break;
+    }
 }
 
 void gerer_souris_mouvement(int x, int y) {
+    int dx = x - prev_x;
+    int dy = y - prev_y;
 
+    //float angleAroundX = (dy / 180.0) * M_PI;
+    float angleAroundY = (dx / 180.0) * M_PI;
+
+    glm::vec3 t(0.0, 1.0, 0.0);
+    viewMat = glm::rotate(viewMat, angleAroundY, t);
+
+    sendVariablesToShader(shaderFrameBufferProg);
+    glutPostRedisplay();
+
+    prev_x = x;
+    prev_y = y;
 }
 
 void terminate() {
@@ -205,7 +232,7 @@ int main(int argvc, char **argv)
 {
     try {
         glutInit(&argvc, argv);
-        glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);    /* affichage couleur */
+        glutInitDisplayMode(GLUT_RGB);     /* affichage couleur */
         glutInitWindowSize(screenWidth, screenHeight);  /* taille initiale fenetre graphique */
         glutInitWindowPosition(200,200);                /* position initiale */
         glutCreateWindow(argv[0]);                      /* creation de la fenetre graphique et du contexte OpenGL */
@@ -473,14 +500,10 @@ void sendVariablesToShader(GLuint program)
 {
     glUseProgram(program);
 
-    glm::vec3 camCenter(0,0,10);
-    glm::vec3 lookAt(0,0,0);
-    glm::vec3 upDir(0,1,0);
     float depth = 20.0f;
 
     glm::mat4 projMat_persp = glm::perspective(90.0f, (float)screenWidth / (float)screenHeight, 0.1f, 40.0f);
     glm::mat4 projMat_ortho = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.0f, depth);
-    glm::mat4 viewMat = glm::lookAt(camCenter, lookAt, upDir);
     glm::mat4 modelMat = glm::mat4();
     glm::vec3 light = glm::vec3(0,0,-1);
 
